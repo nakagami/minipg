@@ -256,7 +256,8 @@ def _process_messages(conn, cur=None):
         ln = _bytes_to_bint(conn._read(4)) - 4
         data = conn._read(ln)
         if code == PG_B_READY_FOR_QUERY:
-            conn.in_transaction = (data == b'I')
+            DEBUG_OUTPUT("READY_FOR_QUERY:", data)
+            conn.ready_for_query = (data == b'I')
             return
         elif code == PG_B_AUTHENTICATION:
             auth_code = _bytes_to_bint(data)
@@ -295,6 +296,7 @@ class Connection(object):
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
+        self.ready_for_query = False
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
