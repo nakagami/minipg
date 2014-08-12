@@ -39,6 +39,13 @@ paramstyle = 'format'
 
 DEBUG = True
 
+def DEBUG_OUTPUT(*argv):
+    if not DEBUG:
+        return
+    for s in argv:
+        print(s, end=' ', file=sys.stderr)
+    print(file=sys.stderr)
+
 # Format Codes
 FC_BINARY = 1
 FC_TEXT = 0
@@ -183,13 +190,6 @@ def _decode_float4(data, i, ln):
 def _decode_float8(data, i, ln):
     return struct.unpack("d", data[i:])[0]
 
-def DEBUG_OUTPUT(*argv):
-    if not DEBUG:
-        return
-    for s in argv:
-        print(s, end=' ', file=sys.stderr)
-    print(file=sys.stderr)
-
 def _bytes_to_bint(b, u=False):     # Read as big endian
     if u:
         fmtmap = {1: 'B', 2: '>H', 4: '>L', 8: '>Q'}
@@ -247,6 +247,22 @@ class NotSupportedError(DatabaseError):
     def __init__(self):
         DatabaseError.__init__(self, 'NotSupportedError')
 
+#------------------------------------------------------------------------------
+
+def _process_messages(conn, cur=None):
+    while True:
+        code = conn._read(1)
+        ln = _bytes_to_bint(conn._read(4))
+        data = conn._read(ln)
+        DEBUG_OUTPUT("_process_messages:", code)
+        if code == PG_B_READY_FOR_QUERY:
+            conn.in_transaction = (data == b'I')
+            return
+        elif code == PG_B_AUTHENTICATION:
+            pass
+        else:
+            DEBUG_OUTPUT("SKIP MESSAGE:", code)
+
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
@@ -279,6 +295,7 @@ class Connection(object):
             b'\x00',
         ])
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
+        _process_messages(self)
 
     def _send_message(self, code, data):
         self._write(
