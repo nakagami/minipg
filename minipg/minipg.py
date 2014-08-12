@@ -255,14 +255,18 @@ def _process_messages(conn, cur=None):
         code = conn._read(1)
         ln = _bytes_to_bint(conn._read(4)) - 4
         data = conn._read(ln)
-        DEBUG_OUTPUT("_process_messages:", code, ln, binascii.b2a_hex(data))
         if code == PG_B_READY_FOR_QUERY:
             conn.in_transaction = (data == b'I')
             return
         elif code == PG_B_AUTHENTICATION:
             pass
+        elif code == PG_B_PARAMETER_STATUS:
+            k, v, _ = data.split(b'\x00')
+            k = k.decode('ascii')
+            v = v.decode('ascii')
+            DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
         else:
-            DEBUG_OUTPUT("SKIP MESSAGE:", code)
+            DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
 class Cursor(object):
     def __init__(self, connection):
@@ -291,8 +295,8 @@ class Connection(object):
         self.sock.settimeout(self.timeout)
         v = b''.join([
             _bint_to_bytes(196608, 4),  # protocol version 3.0
-            b'user\x00', user.encode('ascii'), '\x00',
-            b'database\x00', database.encode('ascii'), '\x00',
+            b'user\x00', user.encode('ascii'), b'\x00',
+            b'database\x00', database.encode('ascii'), b'\x00',
             b'\x00',
         ])
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
