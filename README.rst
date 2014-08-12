@@ -1,4 +1,4 @@
 minipg
 ======
 
-Yet another PostgreSQL database driver
+Yet another Python PostgreSQL database driver
