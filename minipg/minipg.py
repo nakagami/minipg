@@ -259,7 +259,15 @@ def _process_messages(conn, cur=None):
             conn.in_transaction = (data == b'I')
             return
         elif code == PG_B_AUTHENTICATION:
-            pass
+            auth_code = _bytes_to_bint(data)
+            DEBUG_OUTPUT("AUTHENTICATION:", code, auth_code)
+            if auth_code == 0:
+                pass
+            elif auth_code == 5:
+                # TODO: MD5 hash
+                pass
+            else:
+                raise InterfaceError("Authentication method %d not supported." % (auth_code,))
         elif code == PG_B_PARAMETER_STATUS:
             k, v, _ = data.split(b'\x00')
             k = k.decode('ascii')
@@ -267,6 +275,8 @@ def _process_messages(conn, cur=None):
             DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
             if k == 'server_encoding':
                 conn.encoding = v
+        elif code == PG_B_BACKEND_KEY_DATA:
+            DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
         else:
             DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
@@ -323,14 +333,17 @@ class Connection(object):
         self.sock.send(b)
         return 
 
+    def _close(self):
+        self.sock.close()
+        self.sock = None
+
     def cursor(self):
         return Cursor(self)
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
         self._write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
-        self.sock.close()
-        self.sock = None
+        self._close()
 
 def connect(user, password, database, host='localhost', port=5432, timeout=60, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
