@@ -27,6 +27,7 @@ from __future__ import print_function
 import sys
 import socket
 import struct
+import binascii
 import datetime
 
 PY2 = sys.version_info[0] == 2
@@ -252,9 +253,9 @@ class NotSupportedError(DatabaseError):
 def _process_messages(conn, cur=None):
     while True:
         code = conn._read(1)
-        ln = _bytes_to_bint(conn._read(4))
+        ln = _bytes_to_bint(conn._read(4)) - 4
         data = conn._read(ln)
-        DEBUG_OUTPUT("_process_messages:", code, ln)
+        DEBUG_OUTPUT("_process_messages:", code, ln, binascii.b2a_hex(data))
         if code == PG_B_READY_FOR_QUERY:
             conn.in_transaction = (data == b'I')
             return
