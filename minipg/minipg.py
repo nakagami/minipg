@@ -265,6 +265,8 @@ def _process_messages(conn, cur=None):
             k = k.decode('ascii')
             v = v.decode('ascii')
             DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
+            if k == 'server_encoding':
+                conn.encoding = v
         else:
             DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
@@ -282,6 +284,7 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.use_ssl = use_ssl
+        self.encoding = 'UTF8'
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
