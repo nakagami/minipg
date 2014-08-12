@@ -254,7 +254,7 @@ def _process_messages(conn, cur=None):
         code = conn._read(1)
         ln = _bytes_to_bint(conn._read(4))
         data = conn._read(ln)
-        DEBUG_OUTPUT("_process_messages:", code)
+        DEBUG_OUTPUT("_process_messages:", code, ln)
         if code == PG_B_READY_FOR_QUERY:
             conn.in_transaction = (data == b'I')
             return
