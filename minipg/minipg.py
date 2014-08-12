@@ -25,6 +25,7 @@
 
 from __future__ import print_function
 import sys
+import socket
 import struct
 import datetime
 
@@ -212,7 +213,7 @@ def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
             if b[nbytes -i -1] == 256:
                 b[nbytes -i -1] = 0
                 b[nbytes -i -2] += 1
-    return bs(b)
+    return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
 
 class Error(Exception):
     pass
@@ -253,20 +254,20 @@ class Cursor(object):
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
         DEBUG_OUTPUT("Connection::__init__()")
-        sel.user = user
+        self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.use_ssl = self.use_ssl
+        self.use_ssl = use_ssl
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
-            self.sock.write(_bint_to_bytes(8, 4))
-            self.sock.write(_bint_to_bytes(80877103, 4))    # SSL request
-            if self.sock.recv(1) == b'S':
+            self._write(_bint_to_bytes(8, 4))
+            self._write(_bint_to_bytes(80877103, 4))    # SSL request
+            if self_read(1) == b'S':
                 self.sock = ssl.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
@@ -274,13 +275,13 @@ class Connection(object):
         v = b''.join([
             _bint_to_bytes(196608, 4),  # protocol version 3.0
             b'user\x00', user.encode('ascii'), '\x00',
-            b'database\x00', databse.encode('ascii'), '\x00',
+            b'database\x00', database.encode('ascii'), '\x00',
             b'\x00',
         ])
-        v.sock.write(_int_to_bytes(len(v) + 4) + v)
+        self._write(_bint_to_bytes(len(v) + 4, 4) + v)
 
     def _send_message(self, code, data):
-        self.sock.write(
+        self._write(
             b''.join([code, _bint_to_bytes(len(data) + 4, 4), data, PG_F_FLUSH, b'\x00\x00\x00\x04'])
         )
 
@@ -290,9 +291,19 @@ class Connection(object):
     def __exit__(self, exc, value, traceback):
         self.close()
 
+    def _read(self, ln):
+        return self.sock.recv(ln)
+
+    def _write(self, b):
+        self.sock.send(b)
+        return 
+
+    def cursor(self):
+        return Cursor(self)
+
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
-        self.sock.write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
+        self._write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
         self.sock.close()
         self.sock = None
 

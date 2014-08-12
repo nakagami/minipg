@@ -21,8 +21,27 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 ##############################################################################
+import minipg
 import unittest
 import minipg
+
+class TestMiniPG(unittest.TestCase):
+    user='postgres'
+    password=''
+    database='test_minipg'
+
+    def setUp(self):
+        self.connection = minipg.connect(
+                            user=self.user,
+                            password=self.password,
+                            database=self.database)
+    def tearDown(self):
+        self.connection.close()
+
+    def test_basic(self):
+        conn = self.connection
+        cur = conn.cursor()
+            
 
 if __name__ == "__main__":
     import unittest
