@@ -260,15 +260,15 @@ def _process_messages(conn, cur=None):
             conn.ready_for_query = (data == b'I')
             return
         elif code == PG_B_AUTHENTICATION:
-            auth_code = _bytes_to_bint(data)
-            DEBUG_OUTPUT("AUTHENTICATION:", code, auth_code)
-            if auth_code == 0:
+            auth_method = _bytes_to_bint(data[:4])
+            DEBUG_OUTPUT("AUTHENTICATION:auth_method=", auth_method)
+            if auth_method == 0:      # trust
                 pass
-            elif auth_code == 5:
-                # TODO: MD5 hash
-                pass
+            elif auth_method == 5:    # md5
+                salt = data[4:]
+                # TODO:md5 authentication
             else:
-                raise InterfaceError("Authentication method %d not supported." % (auth_code,))
+                raise InterfaceError("Authentication method %d not supported." % (auth_method,))
         elif code == PG_B_PARAMETER_STATUS:
             k, v, _ = data.split(b'\x00')
             k = k.decode('ascii')
