@@ -27,6 +27,7 @@ from __future__ import print_function
 import sys
 import socket
 import struct
+import hashlib
 import binascii
 import datetime
 
@@ -249,38 +250,6 @@ class NotSupportedError(DatabaseError):
         DatabaseError.__init__(self, 'NotSupportedError')
 
 #------------------------------------------------------------------------------
-
-def _process_messages(conn, cur=None):
-    while True:
-        code = conn._read(1)
-        ln = _bytes_to_bint(conn._read(4)) - 4
-        data = conn._read(ln)
-        if code == PG_B_READY_FOR_QUERY:
-            DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-            conn.ready_for_query = (data == b'I')
-            return
-        elif code == PG_B_AUTHENTICATION:
-            auth_method = _bytes_to_bint(data[:4])
-            DEBUG_OUTPUT("AUTHENTICATION:auth_method=", auth_method)
-            if auth_method == 0:      # trust
-                pass
-            elif auth_method == 5:    # md5
-                salt = data[4:]
-                # TODO:md5 authentication
-            else:
-                raise InterfaceError("Authentication method %d not supported." % (auth_method,))
-        elif code == PG_B_PARAMETER_STATUS:
-            k, v, _ = data.split(b'\x00')
-            k = k.decode('ascii')
-            v = v.decode('ascii')
-            DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
-            if k == 'server_encoding':
-                conn.encoding = v
-        elif code == PG_B_BACKEND_KEY_DATA:
-            DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
-        else:
-            DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
-
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
@@ -315,12 +284,46 @@ class Connection(object):
             b'\x00',
         ])
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
-        _process_messages(self)
+        self._process_messages()
 
     def _send_message(self, code, data):
         self._write(
             b''.join([code, _bint_to_bytes(len(data) + 4, 4), data, PG_F_FLUSH, b'\x00\x00\x00\x04'])
         )
+        self._flush()
+
+    def _process_messages(self, cur=None):
+        while True:
+            code = self._read(1)
+            ln = _bytes_to_bint(self._read(4)) - 4
+            data = self._read(ln)
+            if code == PG_B_READY_FOR_QUERY:
+                DEBUG_OUTPUT("READY_FOR_QUERY:", data)
+                self.ready_for_query = (data == b'I')
+                return
+            elif code == PG_B_AUTHENTICATION:
+                auth_method = _bytes_to_bint(data[:4])
+                DEBUG_OUTPUT("AUTHENTICATION:auth_method=", auth_method)
+                if auth_method == 0:      # trust
+                    pass
+                elif auth_method == 5:    # md5
+                    salt = data[4:]
+                    hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
+                    hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
+                    self._send_message(PG_F_PASSWORD_MESSAGE, b'md5'+hash2+'\x00')
+                else:
+                    raise InterfaceError("Authentication method %d not supported." % (auth_method,))
+            elif code == PG_B_PARAMETER_STATUS:
+                k, v, _ = data.split(b'\x00')
+                k = k.decode('ascii')
+                v = v.decode('ascii')
+                DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
+                if k == 'server_encoding':
+                    self.encoding = v
+            elif code == PG_B_BACKEND_KEY_DATA:
+                DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
+            else:
+                DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
     def __enter__(self):
         return self
@@ -332,8 +335,10 @@ class Connection(object):
         return self.sock.recv(ln)
 
     def _write(self, b):
-        self.sock.send(b)
-        return 
+        return self.sock.send(b)
+
+    def _flush(self):
+        pass
 
     def _close(self):
         self.sock.close()
