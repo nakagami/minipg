@@ -25,6 +25,7 @@
 
 from __future__ import print_function
 import sys
+import decimal
 import socket
 import struct
 import hashlib
@@ -47,6 +48,37 @@ def DEBUG_OUTPUT(*argv):
     for s in argv:
         print(s, end=' ', file=sys.stderr)
     print(file=sys.stderr)
+
+Date = datetime.date
+Time = datetime.time
+TimeDelta = datetime.timedelta
+Timestamp = datetime.datetime
+def DateFromTicks(ticks):
+    return apply(Date,time.localtime(ticks)[:3])
+def TimeFromTicks(ticks):
+    return apply(Time,time.localtime(ticks)[3:6])
+def TimestampFromTicks(ticks):
+    return apply(Timestamp,time.localtime(ticks)[:6])
+def Binary(b):
+    return bytes(b)
+
+class DBAPITypeObject:
+    def __init__(self,*values):
+        self.values = values
+    def __cmp__(self,other):
+        if other in self.values:
+            return 0
+        if other < self.values:
+            return 1
+        else:
+            return -1
+STRING = DBAPITypeObject(str)
+BINARY = DBAPITypeObject(bytes)
+NUMBER = DBAPITypeObject(int, decimal.Decimal)
+DATETIME = DBAPITypeObject(datetime.datetime, datetime.date, datetime.time)
+DATE = DBAPITypeObject(datetime.date)
+TIME = DBAPITypeObject(datetime.time)
+ROWID = DBAPITypeObject()
 
 # Format Codes
 FC_BINARY = 1
