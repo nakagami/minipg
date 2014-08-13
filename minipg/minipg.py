@@ -254,6 +254,10 @@ class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
 
+    def execute(self, query, args=()):
+        pass
+
+
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
         DEBUG_OUTPUT("Connection::__init__()")
@@ -265,7 +269,9 @@ class Connection(object):
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
+        self.autocommit = False
         self.ready_for_query = False
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
         DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
@@ -284,6 +290,7 @@ class Connection(object):
             b'\x00',
         ])
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
+        self._cursor = self.cursor()
         self._process_messages()
 
     def _send_message(self, code, data):
@@ -346,6 +353,12 @@ class Connection(object):
 
     def cursor(self):
         return Cursor(self)
+
+    def commit(self):
+        self.execute(self._cursor, "commit")
+
+    def rollback(self):
+        self.execute(self._cursor, "rollback")
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
