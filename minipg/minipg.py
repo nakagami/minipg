@@ -417,6 +417,7 @@ class Connection(object):
         return Cursor(self)
 
     def execute(self, cur, query, args=()):
+        DEBUG_OUTPUT('Connection::execute()', query)
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
