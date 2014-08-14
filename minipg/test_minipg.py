@@ -46,6 +46,7 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("""
             create temporary table foo (
               pk        serial,
+              b1        boolean,
               i2        smallint,
               i4        integer,
               i8        bigint,
@@ -55,10 +56,10 @@ class TestMiniPG(unittest.TestCase):
             )
         """)
         cur.execute(u"""
-            insert into foo (i2,i4,i8,dec,dbl,s) values
-                (1, 2, 3, 1.1, 2.1, 'あいうえお'),
-                (2, 3, 4, 1.2, 2.2, 'かきくけこ'),
-                (3, 4, 5, 1.3, 2.3, 'さしすせそ')
+            insert into foo (b1, i2,i4,i8,dec,dbl,s) values
+                (TRUE, 1, 2, 3, 1.1, 2.1, 'あいうえお'),
+                (FALSE, 2, 3, 4, 1.2, 2.2, 'かきくけこ'),
+                (FALSE, 3, 4, 5, 1.3, 2.3, 'さしすせそ')
         """)
         cur.execute("select * from foo")
 
