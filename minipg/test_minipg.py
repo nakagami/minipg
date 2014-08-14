@@ -44,8 +44,8 @@ class TestMiniPG(unittest.TestCase):
         cur = conn.cursor()
         cur.execute("""
             create temporary table foo (
-              data1          int8,
-              data2          int8,
+              data1          int2,
+              data2          int4,
               data3          int8
             )
         """)
@@ -53,8 +53,8 @@ class TestMiniPG(unittest.TestCase):
             insert into foo (data1, data2, data3) values
                 (1, 2, 3), (2, 3, 4), (3, 4, 5)
         """)
-        cur.execute("update foo set data2 = 0")
         cur.execute("select * from foo")
+        cur.execute("update foo set data2 = 0")
 
 if __name__ == "__main__":
     import unittest

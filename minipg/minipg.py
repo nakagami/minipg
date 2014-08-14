@@ -389,6 +389,25 @@ class Connection(object):
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
             elif code == PG_B_ROW_DESCRIPTION:
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
+                if cur is not None:
+                    count = _bytes_to_bint(data[0:2])
+                    cur._description = [None] * count
+                    n = 2
+                    for i in range(count):
+                        name = data[n:n+data[n:].find('\x00')]
+                        n += len(name) + 1
+                        table_oid = _bytes_to_bint(data[n:n+4])
+                        pos = _bytes_to_bint(data[n+4:n+6])
+                        field = (
+                            name,
+                            _bytes_to_bint(data[n+6:n+10]),     # type oid
+                            _bytes_to_bint(data[n+10:n+12]),    # size
+                            _bytes_to_bint(data[n+12:n+16]),    # modifier
+                            _bytes_to_bint(data[n+16:n+18]),    # format
+                        )
+                        n += 18
+                        cur._description[pos-1] = field
+                DEBUG_OUTPUT('\t\t', cur._description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
             else:
