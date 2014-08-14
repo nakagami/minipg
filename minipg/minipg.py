@@ -399,7 +399,7 @@ class Connection(object):
                     cur._description = [None] * count
                     n = 2
                     for i in range(count):
-                        name = data[n:n+data[n:].find('\x00')]
+                        name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
                         table_oid = _bytes_to_bint(data[n:n+4])
                         pos = _bytes_to_bint(data[n+4:n+6])
