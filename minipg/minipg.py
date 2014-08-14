@@ -287,8 +287,6 @@ class Cursor(object):
         self.connection = connection
 
     def execute(self, query, args=()):
-        if not self.connection.in_transaction and not self.connection.autocommit:
-            self.connection.execute(self, "begin transaction")
         self.connection.execute(self, query, args)
 
     def fetchone(self):
@@ -330,7 +328,6 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.in_transaction = False
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
@@ -366,7 +363,6 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-                self.in_transaction = (data == b'I')
                 return
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
@@ -391,6 +387,10 @@ class Connection(object):
                 DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
             elif code == PG_B_COMMAND_COMPLETE:
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
+            elif code == PG_B_ROW_DESCRIPTION:
+                DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
+            elif code == PG_B_DATA_ROW:
+                DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
