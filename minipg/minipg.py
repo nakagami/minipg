@@ -206,24 +206,6 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _decode_bool(data, i, ln):
-    return data[i] == b'\x01'
-
-def _decode_int(data, i, ln):
-    return _bytes_to_bint(data[i, i+ln])
-
-def _decode_string(data, i, ln):
-    return data[i, i+ln].decode('utf-8')
-
-def _decode_bytes(data, i, ln):
-    return data[i: i+ln]
-
-def _decode_float4(data, i, ln):
-    return struct.unpack("f", data[i:])[0]
-
-def _decode_float8(data, i, ln):
-    return struct.unpack("d", data[i:])[0]
-
 def _bytes_to_bint(b, u=False):     # Read as big endian
     if u:
         fmtmap = {1: 'B', 2: '>H', 4: '>L', 8: '>Q'}
