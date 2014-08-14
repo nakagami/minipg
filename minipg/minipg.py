@@ -287,7 +287,32 @@ class Cursor(object):
         self.connection = connection
 
     def execute(self, query, args=()):
-        pass
+        if not self.connection.in_transaction and not self.connection.autocommit:
+            self.connection.execute(self, "begin transaction")
+        self.connection.execute(self, query, args)
+
+    def fetchone(self):
+        return self._rows.popleft()
+        if self.portal_suspended:
+            self.connection.send_EXECUTE(self)
+            self.connection._write(SYNC_MSG)
+            self.connection._flush()
+            self.connection.process_messages(self)
+            if not self.portal_suspended:
+                self.connection.close_portal(self)
+        return self._rows.popleft()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        r = self.fetchone()
+        if not r:
+            raise StopIteration()
+        return r
+
+    def next(self):
+        return self.__next__()
 
 
 class Connection(object):
@@ -302,7 +327,7 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.ready_for_query = False
+        self.in_transaction = False
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
@@ -338,7 +363,7 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-                self.ready_for_query = (data == b'I')
+                self.in_transaction = (data == b'I')
                 return
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
