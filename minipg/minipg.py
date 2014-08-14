@@ -389,6 +389,8 @@ class Connection(object):
                     self.encoding = v
             elif code == PG_B_BACKEND_KEY_DATA:
                 DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
+            elif code == PG_B_COMMAND_COMPLETE:
+                DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
@@ -414,8 +416,12 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def execute(self, cursor, query, args=()):
-        pass
+    def execute(self, cur, query, args=()):
+        self._send_message(
+            PG_F_QUERY,
+            query.encode(self.encoding) + b'\x00',
+        )
+        self._process_messages(cur)
 
     def commit(self):
         self.execute(self._cursor, "commit")

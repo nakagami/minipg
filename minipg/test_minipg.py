@@ -42,7 +42,14 @@ class TestMiniPG(unittest.TestCase):
     def test_basic(self):
         conn = self.connection
         cur = conn.cursor()
-            
+        cur.execute("""
+            create temporary table foo (
+              data1          int8,
+              data2          int8,
+              data3          int8
+            )
+        """
+        )
 
 if __name__ == "__main__":
     import unittest
