@@ -285,8 +285,13 @@ class NotSupportedError(DatabaseError):
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
+        self._description = []
+        self._rows = []
 
     def execute(self, query, args=()):
+        DEBUG_OUTPUT('Cursor::execute()', query)
+        self._description = []
+        self._rows = []
         self.connection.execute(self, query, args)
 
     def fetchone(self):
@@ -410,6 +415,18 @@ class Connection(object):
                 DEBUG_OUTPUT('\t\t', cur._description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
+                n = 2
+                row = []
+                while n < len(data):
+                    ln = _bytes_to_bint(data[n:n+4])
+                    n += 4
+                    if ln == -1:
+                        row.append(None)
+                    else:
+                        row.append(data[n:n+ln])
+                    n += ln
+                cur._rows.append(row)
+                DEBUG_OUTPUT("\t\t", row)
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
