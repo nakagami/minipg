@@ -414,6 +414,9 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
+    def execute(self, cursor, query, args=()):
+        pass
+
     def commit(self):
         self.execute(self._cursor, "commit")
 
