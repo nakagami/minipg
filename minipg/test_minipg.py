@@ -55,14 +55,16 @@ class TestMiniPG(unittest.TestCase):
               s         varchar(255),
               dt        date,
               t1        time,
-              t2        time with time zone
+              t2        time with time zone,
+              t3        timestamp,
+              t4        timestamp with time zone
             )
         """)
         cur.execute(u"""
-            insert into foo (b1, i2,i4,i8,dec,dbl,s,dt,t1,t2) values
-                (TRUE, 1, 2, 3, 1.1, 2.1, 'あいうえお', '2001-01-01', '04:05:06.789', '04:05:06.789'),
-                (FALSE, 2, 3, 4, 1.2, 2.2, 'かきくけこ', 'January 2, 2001', '04:05:06 PST', '04:05:06 PST'),
-                (FALSE, 3, 4, 5, 1.3, 2.3, 'さしすせそ', '20010103', '2003-04-12 04:05:06 America/New_York', '2003-04-12 04:05:06 America/New_York')
+            insert into foo (b1, i2,i4,i8,dec,dbl,s,dt,t1,t2,t3,t4) values
+                (TRUE, 1, 2, 3, 1.1, 2.1, 'あいうえお', '2001-01-01', '04:05:06.789', '04:05:06.789', '2003-04-12 04:05:06.789', '2003-04-12 04:05:06.789'),
+                (FALSE, 2, 3, 4, 1.2, 2.2, 'かきくけこ', 'January 2, 2001', '04:05:06 PST', '04:05:06 PST', '2003-04-12 04:05:06 PST', '2003-04-12 04:05:06 PST'),
+                (FALSE, 3, 4, 5, 1.3, 2.3, 'さしすせそ', '20010103', '2003-04-12 04:05:06 America/New_York', '2003-04-12 04:05:06 America/New_York', '2003-04-12 04:05:06 America/New_York','2003-04-12 04:05:06 America/New_York')
         """)
         cur.execute("select * from foo")
 
