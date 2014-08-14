@@ -427,6 +427,10 @@ class Connection(object):
                     n += ln
                 cur._rows.append(row)
                 DEBUG_OUTPUT("\t\t", row)
+            elif code == PG_B_ERROR_RESPONSE:
+                DEBUG_OUTPUT("ERROR_RESPONSE:", binascii.b2a_hex(data))
+                for b in data.split(b'\x00'):
+                    DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 

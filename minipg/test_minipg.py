@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding:utf-8
 ##############################################################################
 #The MIT License (MIT)
 #
@@ -44,17 +45,22 @@ class TestMiniPG(unittest.TestCase):
         cur = conn.cursor()
         cur.execute("""
             create temporary table foo (
-              data1          int2,
-              data2          int4,
-              data3          int8
+              pk        serial,
+              i2        smallint,
+              i4        integer,
+              i8        bigint,
+              dec       decimal(10, 3),
+              dbl       double precision,
+              s         varchar(255)
             )
         """)
-        cur.execute("""
-            insert into foo (data1, data2, data3) values
-                (1, 2, 3), (2, 3, 4), (3, 4, 5)
+        cur.execute(u"""
+            insert into foo (i2,i4,i8,dec,dbl,s) values
+                (1, 2, 3, 1.1, 2.1, 'あいうえお'),
+                (2, 3, 4, 1.2, 2.2, 'かきくけこ'),
+                (3, 4, 5, 1.3, 2.3, 'さしすせそ')
         """)
         cur.execute("select * from foo")
-        cur.execute("update foo set data2 = 0")
 
 if __name__ == "__main__":
     import unittest
