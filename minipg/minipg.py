@@ -267,25 +267,25 @@ class NotSupportedError(DatabaseError):
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
-        self._description = []
+        self.description = []
         self._rows = []
+        self._current_row = -1
 
     def execute(self, query, args=()):
         DEBUG_OUTPUT('Cursor::execute()', query)
-        self._description = []
+        self.description = []
         self._rows = []
         self.connection.execute(self, query, args)
 
     def fetchone(self):
-        return self._rows.popleft()
-        if self.portal_suspended:
-            self.connection.send_EXECUTE(self)
-            self.connection._write(SYNC_MSG)
-            self.connection._flush()
-            self.connection.process_messages(self)
-            if not self.portal_suspended:
-                self.connection.close_portal(self)
-        return self._rows.popleft()
+        self._current_row += 1
+        if self._current_row >= self.rowcount:
+            return None
+        return self._rows[self._current_row]
+
+    @property
+    def rowcount(self):
+        return len(self._rows)
 
     def close(self):
         self.connection = None
@@ -378,23 +378,27 @@ class Connection(object):
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
                 if cur is not None:
                     count = _bytes_to_bint(data[0:2])
-                    cur._description = [None] * count
+                    cur.description = [None] * count
                     n = 2
                     for i in range(count):
                         name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
                         table_oid = _bytes_to_bint(data[n:n+4])
                         pos = _bytes_to_bint(data[n+4:n+6])
+                        modifier = _bytes_to_bint(data[n+12:n+16]),     # modifier
+                        format = _bytes_to_bint(data[n+16:n+18]),       # format
                         field = (
                             name,
                             _bytes_to_bint(data[n+6:n+10]),     # type oid
+                            None,
                             _bytes_to_bint(data[n+10:n+12]),    # size
-                            _bytes_to_bint(data[n+12:n+16]),    # modifier
-                            _bytes_to_bint(data[n+16:n+18]),    # format
+                            None,
+                            None,
+                            None,
                         )
                         n += 18
-                        cur._description[pos-1] = field
-                DEBUG_OUTPUT('\t\t', cur._description)
+                        cur.description[pos-1] = field
+                DEBUG_OUTPUT('\t\t', cur.description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
                 n = 2
