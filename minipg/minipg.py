@@ -302,6 +302,9 @@ class Cursor(object):
                 self.connection.close_portal(self)
         return self._rows.popleft()
 
+    def close(self):
+        self.connection = None
+
     def __iter__(self):
         return self
 
