@@ -301,6 +301,9 @@ class Cursor(object):
             return None
         return self._rows[self._current_row]
 
+    def fetchall(self):
+        return self._rows
+
     @property
     def rowcount(self):
         return len(self._rows)

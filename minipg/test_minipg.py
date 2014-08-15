@@ -69,6 +69,7 @@ class TestMiniPG(unittest.TestCase):
                 (FALSE, 3, 4, 5, 1.3, 2.3, 'さしすせそ', '20010103', '2003-04-12 04:05:06 America/New_York', '2003-04-12 04:05:06 America/New_York', '2003-04-12 04:05:06 America/New_York','2003-04-12 04:05:06 America/New_York')
         """)
         cur.execute("select * from test_basic")
+        self.assertEqual(len(cur.fetchall()), 3)
 
 if __name__ == "__main__":
     import unittest
