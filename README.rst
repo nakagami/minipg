@@ -46,3 +46,4 @@ Restrictions and Unsupported Features
 --------------------------------------
 
 - Authentication METHOD only can 'trust' or  'md5' in pg_hba.conf.
+- Not support array data types.
