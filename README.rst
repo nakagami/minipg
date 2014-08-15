@@ -24,7 +24,7 @@ Install as module
 ::
 
     $ cd $(PROJECT_HOME)
-    $ wget https://github.com/nakagami/minipg/raw/master/firebirdsql/minipg.py
+    $ wget https://github.com/nakagami/minipg/raw/master/minipg/minipg.py
 
 Example
 -----------------
