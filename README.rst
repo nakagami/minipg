@@ -40,3 +40,9 @@ Example
    cur.execute('select foo, bar from baz')
    for r in cur.fetchall():
       print(r[0], r[1])
+
+
+Restrictions and Unsupported Features
+--------------------------------------
+
+- Authentication METHOD only can 'trust' or  'md5' in pg_hba.conf.
