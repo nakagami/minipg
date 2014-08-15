@@ -36,4 +36,4 @@ Example
    cur = conn.cursor()
    cur.execute('select foo, bar from baz')
    for r in cur.fetchall():
-      print r[0], r[1]
+      print(r[0], r[1])
