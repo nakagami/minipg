@@ -469,8 +469,13 @@ class Connection(object):
 
     def _escape_item(self, v):
         t = type(v)
-        if (PY2 and t == unicode) or (not PY2 and str):
+        if v is None:
+            return 'NULL'
+        elif (PY2 and t == unicode) or (not PY2 and t == str):
             return u"'" + v + u"'"
+        elif t == bool:
+            return u"'t'" if v else u"'f'"
+
         else:
             return str(v)
 

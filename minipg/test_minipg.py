@@ -74,6 +74,10 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 2)
         cur.execute("select i2 from test_basic where s=%s", (u'あいうえお',))
         self.assertEqual(cur.fetchone()[0], 1)
+        cur.execute("select count(*) from test_basic where b1=%s", (True,))
+        self.assertEqual(cur.fetchone()[0], 1)
+        cur.execute("select count(*) from test_basic where b1=%s", (False,))
+        self.assertEqual(cur.fetchone()[0], 2)
 
 if __name__ == "__main__":
     import unittest
