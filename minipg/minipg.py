@@ -493,7 +493,7 @@ class Connection(object):
         self._write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
         self._close()
 
-def connect(user, password, database, host='localhost', port=5432, timeout=60, use_ssl=False):
+def connect(host, user, password, database, port=5432, timeout=60, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
 

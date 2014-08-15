@@ -32,7 +32,10 @@ Example
 ::
 
    import minipg
-   conn = minipg.connect(user='postgres', password='secret', database='db_name')
+   conn = minipg.connect(host='localhost',
+                       user='postgres',
+                       password='secret',
+                       database='database_name')
    cur = conn.cursor()
    cur.execute('select foo, bar from baz')
    for r in cur.fetchall():

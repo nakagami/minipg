@@ -28,12 +28,14 @@ import unittest
 import minipg
 
 class TestMiniPG(unittest.TestCase):
+    host='localhost'
     user='postgres'
     password=''
     database='test_minipg'
 
     def setUp(self):
         self.connection = minipg.connect(
+                            host=self.host,
                             user=self.user,
                             password=self.password,
                             database=self.database)
