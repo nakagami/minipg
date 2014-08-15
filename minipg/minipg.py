@@ -460,11 +460,22 @@ class Connection(object):
         self.sock.close()
         self.sock = None
 
+    def _escape_item(self, v):
+        t = type(v)
+        if (PY2 and t == unicode) or (not PY2 and str):
+            return u"'" + v + u"'"
+        else:
+            return str(v)
+
     def cursor(self):
         return Cursor(self)
 
     def execute(self, cur, query, args=()):
+        if args:
+            escaped_args = tuple(self._escape_item(arg) for arg in args)
+            query = query % escaped_args
         DEBUG_OUTPUT('Connection::execute()', query)
+
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
