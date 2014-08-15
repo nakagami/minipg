@@ -293,10 +293,12 @@ class Cursor(object):
         DEBUG_OUTPUT('Cursor::execute()', query)
         self.description = []
         self._rows = []
+        self._current_row = -1
         self.connection.execute(self, query, args)
 
     def fetchone(self):
         self._current_row += 1
+        DEBUG_OUTPUT('Cursor::fetchone()', self._current_row, self.rowcount)
         if self._current_row >= self.rowcount:
             return None
         return self._rows[self._current_row]
@@ -401,11 +403,12 @@ class Connection(object):
                     count = _bytes_to_bint(data[0:2])
                     cur.description = [None] * count
                     n = 2
+                    idx = 0
                     for i in range(count):
                         name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
                         table_oid = _bytes_to_bint(data[n:n+4])
-                        pos = _bytes_to_bint(data[n+4:n+6])
+                        table_pos = _bytes_to_bint(data[n+4:n+6])
                         modifier = _bytes_to_bint(data[n+12:n+16]),     # modifier
                         format = _bytes_to_bint(data[n+16:n+18]),       # format
                         field = (
@@ -418,7 +421,8 @@ class Connection(object):
                             None,
                         )
                         n += 18
-                        cur.description[pos-1] = field
+                        cur.description[idx] = field
+                        idx += 1
                 DEBUG_OUTPUT('\t\t', cur.description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
