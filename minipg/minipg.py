@@ -244,7 +244,7 @@ def _decode_column(data, oid, encoding):
         return float(data)
     elif oid in (PG_TYPE_NUMERIC, ):
         return decimal.Decimal(data)
-    elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR):
+    elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_JSON):
         return data
 
     # other types return as string
