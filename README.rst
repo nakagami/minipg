@@ -13,13 +13,13 @@ Requirements
 Installation
 -----------------
 
-Install as package
+Install as a package
 
 ::
 
     $ pip install minipg
 
-Install as module
+Install as a module
 
 ::
 
