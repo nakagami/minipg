@@ -231,6 +231,24 @@ def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
                 b[nbytes -i -2] += 1
     return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
 
+
+def _decode_column(data, oid, encoding):
+    data = data.decode(encoding)
+    if oid in (PG_TYPE_BOOL,):
+        return data == 't'
+    elif oid in (PG_TYPE_INT2, PG_TYPE_INT4, PG_TYPE_INT8,):
+        return int(data)
+    elif oid in (PG_TYPE_FLOAT4, PG_TYPE_FLOAT8):
+        return float(data)
+    elif oid in (PG_TYPE_NUMERIC, ):
+        return decimal.Decimal(data)
+    elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR):
+        return data
+
+    # other types return as string
+    DEBUG_OUTPUT('_decode_column()', data, oid)
+    return data
+
 class Error(Exception):
     pass
 
@@ -411,6 +429,9 @@ class Connection(object):
                     else:
                         row.append(data[n:n+ln])
                     n += ln
+                for i in range(len(row)):
+                    row[i] = _decode_column(row[i], cur.description[i][1], self.encoding)
+
                 cur._rows.append(row)
                 DEBUG_OUTPUT("\t\t", row)
             elif code == PG_B_ERROR_RESPONSE:
