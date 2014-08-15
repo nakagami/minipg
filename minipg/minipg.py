@@ -233,6 +233,8 @@ def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
 
 
 def _decode_column(data, oid, encoding):
+    if data is None:
+        return data
     data = data.decode(encoding)
     if oid in (PG_TYPE_BOOL,):
         return data == 't'
@@ -435,7 +437,7 @@ class Connection(object):
                         row.append(None)
                     else:
                         row.append(data[n:n+ln])
-                    n += ln
+                        n += ln
                 for i in range(len(row)):
                     row[i] = _decode_column(row[i], cur.description[i][1], self.encoding)
 
