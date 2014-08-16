@@ -355,6 +355,10 @@ class Cursor(object):
             return None
         return self._rows[self._current_row]
 
+    def fetchmany(self, size=1):
+        r = self._rows[self._current_row:self._current_row+size]
+        self._current_row += size
+
     def fetchall(self):
         return self._rows
 
