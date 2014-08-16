@@ -96,12 +96,24 @@ class TestMiniPG(unittest.TestCase):
             )
         """)
         self.connection.commit()
+        # roolback
         cur.execute("insert into test_trans (i2) values (1)")
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 1)
         self.connection.rollback()
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 0)
+        # commit & rollback
+        cur.execute("insert into test_trans (i2) values (1)")
+        cur.execute("select count(*) from test_trans")
+        self.assertEqual(cur.fetchone()[0], 1)
+        self.connection.commit()
+        cur.execute("insert into test_trans (i2) values (2)")
+        cur.execute("select count(*) from test_trans")
+        self.assertEqual(cur.fetchone()[0], 2)
+        self.connection.rollback()
+        cur.execute("select count(*) from test_trans")
+        self.assertEqual(cur.fetchone()[0], 1)
 
 if __name__ == "__main__":
     import unittest
