@@ -83,6 +83,10 @@ class TestMiniPG(unittest.TestCase):
 
         cur.execute("select to_json(test_basic) from test_basic")
         self.assertEqual(len(cur.fetchall()), 3)
+        try:
+            cur.execute("E")
+        except minipg.ProgrammingError as e:
+            self.assertEqual(str(e), 'syntax error at or near "E"')
 
 if __name__ == "__main__":
     import unittest

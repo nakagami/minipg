@@ -293,7 +293,10 @@ def _decode_column(data, oid, encoding):
     return data
 
 class Error(Exception):
-    pass
+    def __init__(self, message):
+        self._message = message
+    def __str__(self):
+        return self._message
 
 class InterfaceError(Error):
     pass
@@ -513,8 +516,10 @@ class Connection(object):
                 DEBUG_OUTPUT("\t\t", row)
             elif code == PG_B_ERROR_RESPONSE:
                 DEBUG_OUTPUT("ERROR_RESPONSE:", binascii.b2a_hex(data))
-                for b in data.split(b'\x00'):
+                err = data.split(b'\x00')
+                for b in err:
                     DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
+                raise ProgrammingError(err[2][1:].decode(self.encoding))
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
