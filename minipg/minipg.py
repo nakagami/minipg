@@ -447,8 +447,8 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-                self.in_transaction = data = b'I'
-                return
+                self.in_transaction = (data == b'I')
+                break
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
                 DEBUG_OUTPUT("AUTHENTICATION:auth_method=", auth_method)
@@ -528,6 +528,8 @@ class Connection(object):
                 raise ProgrammingError(err[2][1:].decode(self.encoding))
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
+
+        return
 
     def __enter__(self):
         return self
