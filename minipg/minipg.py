@@ -410,7 +410,6 @@ class Connection(object):
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
-        self.autocommit = False
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
@@ -557,11 +556,15 @@ class Connection(object):
         )
         self._process_messages(cur)
 
+    def autocommit(self, value):
+        self.execute(self._cursor,
+            'SET AUTOCOMMIT = %s', ('ON' if value else 'OFF', ))
+
     def commit(self):
-        self.execute(self._cursor, "commit")
+        self.execute(self._cursor, "COMMIT")
 
     def rollback(self):
-        self.execute(self._cursor, "rollback")
+        self.execute(self._cursor, "ROLLBACK")
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
