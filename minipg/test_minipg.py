@@ -85,7 +85,7 @@ class TestMiniPG(unittest.TestCase):
         try:
             cur.execute("E")
         except minipg.ProgrammingError as e:
-            self.assertEqual(str(e), 'syntax error at or near "E"')
+            self.assertEqual(str(e), u'42601:syntax error at or near "E"')
 
     def test_trans(self):
         cur = self.connection.cursor()

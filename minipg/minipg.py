@@ -41,7 +41,7 @@ apilevel = '2.0'
 threadsafety = 1
 paramstyle = 'format'
 
-DEBUG = True
+DEBUG = False
 
 def DEBUG_OUTPUT(*argv):
     if not DEBUG:
