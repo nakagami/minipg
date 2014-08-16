@@ -344,7 +344,7 @@ def escape_parameter(v):
         return u"'t'" if v else u"'f'"
 
     else:
-        return str(v)
+        return "'" + str(v) + "'"
 
 class Cursor(object):
     def __init__(self, connection):
