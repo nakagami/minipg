@@ -108,7 +108,7 @@ PG_F_FLUSH = b'H'
 PG_F_FUNCTION_CALL = b'F'
 PG_B_FUNCTION_CALL_RESPONSE = b'V'
 PG_B_NO_DATA = b'n'
-PG_B_NOTICE_RESPNSE = b'N'
+PG_B_NOTICE_RESPONSE = b'N'
 PG_B_NOTIFICATION_RESPONSE = b'A'
 PG_B_PARAMETER_DESCRIPTION = b't'
 PG_B_PARAMETER_STATUS = b'S'
@@ -514,6 +514,10 @@ class Connection(object):
 
                 cur._rows.append(row)
                 DEBUG_OUTPUT("\t\t", row)
+            elif code == PG_B_NOTICE_RESPONSE:
+                DEBUG_OUTPUT("NOTICE_RESPONSE:", binascii.b2a_hex(data))
+                for s in data.split(b'\x00'):
+                    DEBUG_OUTPUT("\t\t", s.decode(self.encoding))
             elif code == PG_B_ERROR_RESPONSE:
                 DEBUG_OUTPUT("ERROR_RESPONSE:", binascii.b2a_hex(data))
                 err = data.split(b'\x00')
