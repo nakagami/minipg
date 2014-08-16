@@ -31,6 +31,7 @@ import struct
 import hashlib
 import binascii
 import datetime
+import re
 
 PY2 = sys.version_info[0] == 2
 
@@ -334,12 +335,16 @@ class UTC(datetime.tzinfo):
         return "UTC"
 
 #------------------------------------------------------------------------------
+ESCAPE_REGEX = re.compile(r"[\0\n\r\032\'\"\\]")
+ESCAPE_MAP = {'\0': '\\0', '\n': '\\n', '\r': '\\r', '\032': '\\Z',
+              '\'': '\'\'', '"': '\\"', '\\': '\\\\'}
 def escape_parameter(v):
     t = type(v)
     if v is None:
         return 'NULL'
     elif (PY2 and t == unicode) or (not PY2 and t == str):
-        return u"'" + v + u"'"
+        return ("'%s'" % ESCAPE_REGEX.sub(
+                    lambda match: ESCAPE_MAP.get(match.group(0)), v))
     elif t == bool:
         return u"'t'" if v else u"'f'"
 
@@ -354,7 +359,7 @@ class Cursor(object):
         self._current_row = -1
 
     def execute(self, query, args=()):
-        DEBUG_OUTPUT('Cursor::execute()', query)
+        DEBUG_OUTPUT('Cursor::execute()', query, args)
         self.description = []
         self._rows = []
         self._current_row = -1
