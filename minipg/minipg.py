@@ -293,10 +293,11 @@ def _decode_column(data, oid, encoding):
     return data
 
 class Error(Exception):
-    def __init__(self, message):
+    def __init__(self, errcode, message):
+        self._errcode = errcode
         self._message = message
     def __str__(self):
-        return self._message
+        return self._errcode + u":" + self._message
 
 class InterfaceError(Error):
     pass
@@ -527,7 +528,13 @@ class Connection(object):
                 err = data.split(b'\x00')
                 for b in err:
                     DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
-                raise ProgrammingError(err[2][1:].decode(self.encoding))
+                # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
+                errcode = err[1][1:].decode(self.encoding)
+                message = err[2][1:].decode(self.encoding)
+                if errcode[:2] == u'23':
+                    raise IntegrityError(errcode, message)
+                else:
+                    raise ProgrammingError(errcode, message)
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 
