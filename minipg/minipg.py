@@ -244,6 +244,20 @@ def _decode_column(data, oid, encoding):
         return float(data)
     elif oid in (PG_TYPE_NUMERIC, ):
         return decimal.Decimal(data)
+    elif oid in (PG_TYPE_DATE, ):
+        dt = datetime.datetime.strptime(data, '%Y-%m-%d')
+        return datetime.date(dt.year, dt.month, dt.day)
+    elif oid in (PG_TYPE_TIME, ):
+        if len(data) == 8:
+            dt = datetime.datetime.strptime(data, '%H:%M:%S')
+        else:
+            dt = datetime.datetime.strptime(data, '%H:%M:%S.%f')
+        return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
+    elif oid in (PG_TYPE_TIMESTAMP, ):
+        if len(data) == 19:
+            return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
+        else:
+            return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
     elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_JSON):
         return data
 
