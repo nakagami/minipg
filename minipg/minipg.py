@@ -334,6 +334,18 @@ class UTC(datetime.tzinfo):
         return "UTC"
 
 #------------------------------------------------------------------------------
+def escape_parameter(v):
+    t = type(v)
+    if v is None:
+        return 'NULL'
+    elif (PY2 and t == unicode) or (not PY2 and t == str):
+        return u"'" + v + u"'"
+    elif t == bool:
+        return u"'t'" if v else u"'f'"
+
+    else:
+        return str(v)
+
 class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
@@ -523,24 +535,12 @@ class Connection(object):
         self.sock.close()
         self.sock = None
 
-    def _escape_item(self, v):
-        t = type(v)
-        if v is None:
-            return 'NULL'
-        elif (PY2 and t == unicode) or (not PY2 and t == str):
-            return u"'" + v + u"'"
-        elif t == bool:
-            return u"'t'" if v else u"'f'"
-
-        else:
-            return str(v)
-
     def cursor(self):
         return Cursor(self)
 
     def execute(self, cur, query, args=()):
         if args:
-            escaped_args = tuple(self._escape_item(arg) for arg in args)
+            escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query % escaped_args
         DEBUG_OUTPUT('Connection::execute()', query)
 
