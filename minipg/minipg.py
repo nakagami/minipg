@@ -556,9 +556,8 @@ class Connection(object):
         )
         self._process_messages(cur)
 
-    def set_autocommit(self, value):
-        self.execute(self._cursor,
-            'SET AUTOCOMMIT = %s', ('ON' if value else 'OFF', ))
+    def set_autocommit(self):
+        self.execute(self._cursor, 'SET AUTOCOMMIT TO ON')
 
     def commit(self):
         self.execute(self._cursor, "COMMIT")
