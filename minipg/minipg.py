@@ -258,6 +258,32 @@ def _decode_column(data, oid, encoding):
             return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
         else:
             return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
+    elif oid in (PG_TYPE_TIMETZ, ):
+        n = data.rfind('+')
+        if n == -1:
+            n = data.rfind('-')
+        s = data[:n]
+        offset = int(data[n:])
+        if len(s) == 8:
+            dt = datetime.datetime.strptime(s, '%H:%M:%S')
+        else:
+            dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
+        dt.replace(tzinfo=UTC())
+        dt += datetime.timedelta(hours=offset)
+        return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
+    elif oid in (PG_TYPE_TIMESTAMPTZ, ):
+        n = data.rfind('+')
+        if n == -1:
+            n = data.rfind('-')
+        s = data[:n]
+        offset = int(data[n:])
+        if len(s) == 19:
+            dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+        else:
+            dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
+        dt.replace(tzinfo=UTC())
+        dt += datetime.timedelta(hours=offset)
+        return dt
     elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_JSON):
         return data
 
