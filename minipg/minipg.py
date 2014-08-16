@@ -571,6 +571,10 @@ class Connection(object):
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
 
+    def begin(self):
+        self._send_message(PG_F_QUERY, b"BEGIN\x00")
+        self._process_messages(self._cursor)
+
     def commit(self):
         self._send_message(PG_F_QUERY, b"COMMIT\x00")
         self._process_messages(self._cursor)
