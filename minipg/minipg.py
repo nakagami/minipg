@@ -361,6 +361,8 @@ class Cursor(object):
         self.description = []
         self._rows = []
         self._current_row = -1
+        self.query = query
+        self.args = args
         self.connection.execute(self, query, args)
 
     def fetchone(self):
