@@ -572,10 +572,12 @@ class Connection(object):
         self.autocommit = autocommit
 
     def commit(self):
-        self.execute(self._cursor, "COMMIT")
+        self._send_message(PG_F_QUERY, b"COMMIT\x00")
+        self._process_messages(self._cursor)
 
     def rollback(self):
-        self.execute(self._cursor, "ROLLBACK")
+        self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
+        self._process_messages(self._cursor)
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
