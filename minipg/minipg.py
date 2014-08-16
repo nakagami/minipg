@@ -447,7 +447,7 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-                self.in_transaction = (data == b'I')
+                self.in_transaction = (data in (b'I', b'T'))
                 break
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
@@ -557,7 +557,7 @@ class Connection(object):
         if args:
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query % escaped_args
-        if self.autocommit and not self.in_transaction:
+        if not self.in_transaction:
             self._send_message(PG_F_QUERY, b"BEGIN\x00")
             self._process_messages(cur)
         DEBUG_OUTPUT('Connection::execute()', query)
@@ -580,10 +580,12 @@ class Connection(object):
     def commit(self):
         self._send_message(PG_F_QUERY, b"COMMIT\x00")
         self._process_messages(self._cursor)
+        self.begin()
 
     def rollback(self):
         self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
         self._process_messages(self._cursor)
+        self.begin()
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')

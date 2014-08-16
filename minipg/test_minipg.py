@@ -43,8 +43,7 @@ class TestMiniPG(unittest.TestCase):
         self.connection.close()
 
     def test_basic(self):
-        conn = self.connection
-        cur = conn.cursor()
+        cur = self.connection.cursor()
         cur.execute("""
             create temporary table test_basic (
               pk        serial,
@@ -87,6 +86,22 @@ class TestMiniPG(unittest.TestCase):
             cur.execute("E")
         except minipg.ProgrammingError as e:
             self.assertEqual(str(e), 'syntax error at or near "E"')
+
+    def test_trans(self):
+        cur = self.connection.cursor()
+        cur.execute("""
+            create temporary table test_trans (
+              pk        serial,
+              i2        smallint
+            )
+        """)
+        self.connection.commit()
+        cur.execute("insert into test_trans (i2) values (1)")
+        cur.execute("select count(*) from test_trans")
+        self.assertEqual(cur.fetchone()[0], 1)
+        self.connection.rollback()
+        cur.execute("select count(*) from test_trans")
+        self.assertEqual(cur.fetchone()[0], 0)
 
 if __name__ == "__main__":
     import unittest
