@@ -411,6 +411,7 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
+        self.in_transaction = False
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
@@ -446,6 +447,7 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
+                self.in_transaction = data = b'I'
                 return
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
@@ -553,6 +555,9 @@ class Connection(object):
         if args:
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query % escaped_args
+        if self.autocommit and not self.in_transaction:
+            self._send_message(PG_F_QUERY, b"BEGIN\x00")
+            self._process_messages(cur)
         DEBUG_OUTPUT('Connection::execute()', query)
         self._send_message(
             PG_F_QUERY,
