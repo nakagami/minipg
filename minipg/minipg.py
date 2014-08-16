@@ -284,7 +284,7 @@ def _decode_column(data, oid, encoding):
         dt.replace(tzinfo=UTC())
         dt += datetime.timedelta(hours=offset)
         return dt
-    elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_JSON):
+    elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
 
     # other types return as string
@@ -368,8 +368,10 @@ class Cursor(object):
         return self._rows[self._current_row]
 
     def fetchmany(self, size=1):
+        self._current_row += 1
         r = self._rows[self._current_row:self._current_row+size]
-        self._current_row += size
+        self._current_row += size -1
+        return r
 
     def fetchall(self):
         return self._rows
