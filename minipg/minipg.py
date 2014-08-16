@@ -410,6 +410,7 @@ class Connection(object):
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
+        self.autocommit = False
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
@@ -549,15 +550,17 @@ class Connection(object):
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query % escaped_args
         DEBUG_OUTPUT('Connection::execute()', query)
-
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
         )
         self._process_messages(cur)
+        if self.autocommit:
+            self._send_message(PG_F_QUERY, b"COMMIT\x00")
+            self._process_messages(cur)
 
-    def set_autocommit(self):
-        self.execute(self._cursor, 'SET AUTOCOMMIT TO ON')
+    def set_autocommit(self, autocommit):
+        self.autocommit = autocommit
 
     def commit(self):
         self.execute(self._cursor, "COMMIT")
