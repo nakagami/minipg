@@ -115,6 +115,23 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 1)
 
+    def test_autocommit(self):
+        self.connection.set_autocommit(True)
+        cur = self.connection.cursor()
+        cur.execute("""
+            create temporary table test_autocommit (
+              pk        serial,
+              i2        smallint
+            )
+        """)
+        self.connection.commit()
+        cur.execute("insert into test_autocommit (i2) values (1)")
+        cur.execute("select count(*) from test_autocommit")
+        self.assertEqual(cur.fetchone()[0], 1)
+        self.connection.rollback()
+        cur.execute("select count(*) from test_autocommit")
+        self.assertEqual(cur.fetchone()[0], 1)
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
