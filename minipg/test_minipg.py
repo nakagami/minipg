@@ -132,6 +132,28 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("select count(*) from test_autocommit")
         self.assertEqual(cur.fetchone()[0], 1)
 
+    def test_function(self):
+        cur = self.connection.cursor()
+        cur.execute("""
+            create or replace function
+                test_function(a text, b text, uppercase boolean default false)
+            returns text
+            as
+            $$
+             select case
+                    when $3 then upper($1 || ' ' || $2)
+                    else lower($1 || ' ' || $2)
+                    end;
+            $$
+            language sql immutable strict;
+        """)
+        cur.execute("SELECT test_function('Hello', 'World', true)")
+        self.assertEqual(cur.fetchone()[0], u"HELLO WORLD")
+        cur.execute("SELECT test_function('Hello', 'World', false)")
+        self.assertEqual(cur.fetchone()[0], u"hello world")
+        cur.execute("SELECT test_function('Hello', 'World')")
+        self.assertEqual(cur.fetchone()[0], u"hello world")
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
