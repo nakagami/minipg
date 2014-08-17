@@ -18,15 +18,10 @@ class TestCommand(Command):
 
 cmdclass = {'test': TestCommand}
 
-version_tuple = __import__('minipg').VERSION
-
-if version_tuple[2] is not None:
-    version = "%d.%d.%s" % version_tuple
-else:
-    version = "%d.%d" % version_tuple[:2]
+version = "%d.%d.%d" % __import__('minipg').VERSION
 
 classifiers = [
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'License :: OSI Approved :: MIT License',
     'Operating System :: OS Independent',
     'Programming Language :: Python',
