@@ -232,7 +232,6 @@ def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
                 b[nbytes -i -2] += 1
     return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
 
-
 def _decode_column(data, oid, encoding):
     if data is None:
         return data
@@ -286,7 +285,10 @@ def _decode_column(data, oid, encoding):
         dt += datetime.timedelta(hours=offset)
         return dt
     elif oid in (PG_TYPE_BYTEA, ):
-        return data
+        assert data[:2] == u'\\x'
+        hex_str = data[2:]
+        ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
+        return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
     elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
 
