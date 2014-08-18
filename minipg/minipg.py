@@ -285,6 +285,8 @@ def _decode_column(data, oid, encoding):
         dt.replace(tzinfo=UTC())
         dt += datetime.timedelta(hours=offset)
         return dt
+    elif oid in (PG_TYPE_BYTEA, ):
+        return data
     elif oid in (PG_TYPE_TEXT, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
 
@@ -346,9 +348,9 @@ def escape_parameter(v):
     elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
         return "'" + v.replace("'", "''") + "'"
     elif PY2 and t == str:  # binary
-        return "'" + ''.join(['\\\\%03o' % (ord(c),) for c in v]) + "'"
+        return "'" + ''.join(['\\%03o' % (ord(c),) for c in v]) + "'::bytea"
     elif t == bytes:        # binary
-        return "'" + ''.join(['\\\\%03o' % (c, ) for c in v]) + "'"
+        return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
     elif t == bool:
         return u"'t'" if v else u"'f'"
     else:

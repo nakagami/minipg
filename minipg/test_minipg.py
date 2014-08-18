@@ -162,7 +162,10 @@ class TestMiniPG(unittest.TestCase):
               b        bytea
             )
         """)
-        cur.execute("insert into test_binary (b) values (%s)", (b'\x00\x01\x02abc',))
+        data = b'\x00\x01\x02abc'
+        cur.execute("insert into test_binary (b) values (%s)", (data,))
+        cur.execute("select b from test_binary")
+        self.assertEqual(cur.fetchone()[0], data)
 
 if __name__ == "__main__":
     import unittest
