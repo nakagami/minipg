@@ -543,6 +543,14 @@ class Connection(object):
                     raise IntegrityError(errcode, message)
                 else:
                     raise ProgrammingError(errcode, message)
+            elif code == PG_B_COPY_OUT_RESPONSE:
+                is_binary = data[0] == '\x01'
+                num_columns = _bytes_to_bint(data[1:3])
+                DEBUG_OUTPUT("COPY_OUT_RESPONSE:", is_binary, num_columns)
+            elif code == PG_COPY_DATA:
+                obj.write(data)
+            elif PG_COPY_DONE:
+                DEBUG_OUTPUT("COPY_DONE")
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 

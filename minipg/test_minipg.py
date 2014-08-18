@@ -26,6 +26,7 @@
 import minipg
 import unittest
 import minipg
+import io
 
 class TestMiniPG(unittest.TestCase):
     host='localhost'
@@ -166,6 +167,27 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("insert into test_binary (b) values (%s)", (data,))
         cur.execute("select b from test_binary")
         self.assertEqual(cur.fetchone()[0], data)
+
+    def test_copy(self):
+        cur = self.connection.cursor()
+        cur.execute("""
+            create temporary table test_copy (
+              pk        serial,
+              b1        boolean,
+              i2        smallint,
+              s         varchar(255)
+            )
+        """)
+        cur.execute(u"""
+            insert into test_copy (b1, i2 ,s) values
+                (TRUE, 1, 'あいうえお'),
+                (FALSE, 2, 'かきくけこ'),
+                (FALSE, 3, 'ABC''s')
+        """)
+        text = b"1\tt\t1\t\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a\n2\tf\t2\t\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\n3\tf\t3\tABC's\n"
+        f = io.BytesIO()
+        self.connection.execute(f, u"copy test_copy to stdout")
+        self.assertEqual(text, f.getvalue())
 
 if __name__ == "__main__":
     import unittest
