@@ -170,8 +170,13 @@ class TestMiniPG(unittest.TestCase):
 
     def test_copy(self):
         cur = self.connection.cursor()
+        try:
+            cur.execute("drop table test_copy")
+        except:
+            pass
+
         cur.execute("""
-            create temporary table test_copy (
+            create table test_copy (
               pk        serial,
               b1        boolean,
               i2        smallint,
