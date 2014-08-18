@@ -548,9 +548,12 @@ class Connection(object):
                 num_columns = _bytes_to_bint(data[1:3])
                 DEBUG_OUTPUT("COPY_OUT_RESPONSE:", is_binary, num_columns)
             elif code == PG_COPY_DATA:
+                DEBUG_OUTPUT("COPY_DATA")
                 obj.write(data)
-            elif PG_COPY_DONE:
+            elif code == PG_COPY_DONE:
                 DEBUG_OUTPUT("COPY_DONE")
+            elif code == PG_B_COPY_IN_RESPONSE:
+                DEBUG_OUTPUT("COPY_IN_RESPONSE")
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
 

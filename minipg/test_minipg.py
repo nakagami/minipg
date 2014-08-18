@@ -189,6 +189,9 @@ class TestMiniPG(unittest.TestCase):
         self.connection.execute(f, u"copy test_copy to stdout")
         self.assertEqual(text, f.getvalue())
 
+        cur.execute("truncate table test_copy")
+        self.connection.execute(io.BytesIO(text), u"copy test_copy from stdin")
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
