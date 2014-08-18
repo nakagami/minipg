@@ -189,6 +189,11 @@ class TestMiniPG(unittest.TestCase):
                 (FALSE, 2, 'かきくけこ'),
                 (FALSE, 3, 'ABC''s')
         """)
+        self.connection.commit()
+
+        # reconnect and check
+        self.connection.close()
+        self.connection.reopen()
         text = b"1\tt\t1\t\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a\n2\tf\t2\t\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\n3\tf\t3\tABC's\n"
         # COPY TO
         f = io.BytesIO()
