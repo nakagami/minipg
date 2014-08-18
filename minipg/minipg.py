@@ -35,7 +35,7 @@ import re
 
 PY2 = sys.version_info[0] == 2
 
-VERSION = (0, 1, 0)
+VERSION = (0, 1, 1)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
