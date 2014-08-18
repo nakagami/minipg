@@ -154,6 +154,16 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("SELECT test_function('Hello', 'World')")
         self.assertEqual(cur.fetchone()[0], u"hello world")
 
+    def test_binary(self):
+        cur = self.connection.cursor()
+        cur.execute("""
+            create temporary table test_binary (
+              pk       serial,
+              b        bytea
+            )
+        """)
+        cur.execute("insert into test_binary (b) values (%s)", (b'\x00\x01\x02abc',))
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
