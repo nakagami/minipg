@@ -553,10 +553,20 @@ class Connection(object):
             elif code == PG_COPY_DONE:
                 DEBUG_OUTPUT("COPY_DONE")
             elif code == PG_B_COPY_IN_RESPONSE:
-                DEBUG_OUTPUT("COPY_IN_RESPONSE")
+                is_binary = data[0] == '\x01'
+                num_columns = _bytes_to_bint(data[1:3])
+                DEBUG_OUTPUT("COPY_IN_RESPONSE", is_binary, num_columns)
+                while True:
+                    buf = obj.read(8192)
+                    if not buf:
+                        break
+                    self._write(PG_COPY_DATA + _bint_to_bytes(len(buf) + 4, 4))
+                    self._write(buf)
+                    self._flush()
+                self._write(PG_COPY_DONE + b'\x00\x00\x00\x04' + PG_F_SYNC + b'\x00\x00\x00\x04')
+                self._flush()
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
-
         return
 
     def __enter__(self):

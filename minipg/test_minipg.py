@@ -190,7 +190,11 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(text, f.getvalue())
 
         cur.execute("truncate table test_copy")
+        cur.execute("select count(*) from test_copy")
+        self.assertEqual(cur.fetchone()[0], 0)
         self.connection.execute(io.BytesIO(text), u"copy test_copy from stdin")
+        cur.execute("select count(*) from test_copy")
+        self.assertEqual(cur.fetchone()[0], 3)
 
 if __name__ == "__main__":
     import unittest
