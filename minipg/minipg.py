@@ -451,7 +451,7 @@ class Connection(object):
         )
         self._flush()
 
-    def _process_messages(self, cur=None):
+    def _process_messages(self, obj=None):
         while True:
             code = self._read(1)
             ln = _bytes_to_bint(self._read(4)) - 4
@@ -485,9 +485,9 @@ class Connection(object):
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
             elif code == PG_B_ROW_DESCRIPTION:
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
-                if cur is not None:
+                if obj is not None:
                     count = _bytes_to_bint(data[0:2])
-                    cur.description = [None] * count
+                    obj.description = [None] * count
                     n = 2
                     idx = 0
                     for i in range(count):
@@ -507,9 +507,9 @@ class Connection(object):
                             None,
                         )
                         n += 18
-                        cur.description[idx] = field
+                        obj.description[idx] = field
                         idx += 1
-                DEBUG_OUTPUT('\t\t', cur.description)
+                DEBUG_OUTPUT('\t\t', obj.description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
                 n = 2
@@ -523,9 +523,9 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], cur.description[i][1], self.encoding)
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding)
 
-                cur._rows.append(row)
+                obj._rows.append(row)
                 DEBUG_OUTPUT("\t\t", row)
             elif code == PG_B_NOTICE_RESPONSE:
                 DEBUG_OUTPUT("NOTICE_RESPONSE:", binascii.b2a_hex(data))
@@ -570,22 +570,22 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def execute(self, cur, query, args=()):
+    def execute(self, obj, query, args=()):
         if args:
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query % escaped_args
         if not self.in_transaction:
             self._send_message(PG_F_QUERY, b"BEGIN\x00")
-            self._process_messages(cur)
+            self._process_messages(obj)
         DEBUG_OUTPUT('Connection::execute()', query)
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
         )
-        self._process_messages(cur)
+        self._process_messages(obj)
         if self.autocommit:
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
-            self._process_messages(cur)
+            self._process_messages(obj)
 
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
