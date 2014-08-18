@@ -185,16 +185,24 @@ class TestMiniPG(unittest.TestCase):
                 (FALSE, 3, 'ABC''s')
         """)
         text = b"1\tt\t1\t\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a\n2\tf\t2\t\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\n3\tf\t3\tABC's\n"
+        # COPY TO
         f = io.BytesIO()
         self.connection.execute(f, u"copy test_copy to stdout")
         self.assertEqual(text, f.getvalue())
 
+        # COPY FROM
         cur.execute("truncate table test_copy")
         cur.execute("select count(*) from test_copy")
         self.assertEqual(cur.fetchone()[0], 0)
         self.connection.execute(io.BytesIO(text), u"copy test_copy from stdin")
-        cur.execute("select count(*) from test_copy")
-        self.assertEqual(cur.fetchone()[0], 3)
+        self.connection.commit()
+
+        # reconnect and check
+        self.connection.close()
+        self.connection.reopen()
+        f = io.BytesIO()
+        self.connection.execute(f, u"copy test_copy to stdout")
+        self.assertEqual(text, f.getvalue())
 
 if __name__ == "__main__":
     import unittest

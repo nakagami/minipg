@@ -423,27 +423,8 @@ class Connection(object):
         self.encoding = 'UTF8'
         self.autocommit = False
         self.in_transaction = False
+        self._open()
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
-        if self.use_ssl:
-            self._write(_bint_to_bytes(8, 4))
-            self._write(_bint_to_bytes(80877103, 4))    # SSL request
-            if self_read(1) == b'S':
-                self.sock = ssl.wrap_socket(self.sock)
-            else:
-                raise InterfaceError("Server refuses SSL")
-        self.sock.settimeout(self.timeout)
-        v = b''.join([
-            _bint_to_bytes(196608, 4),  # protocol version 3.0
-            b'user\x00', user.encode('ascii'), b'\x00',
-            b'database\x00', database.encode('ascii'), b'\x00',
-            b'\x00',
-        ])
-        self._write(_bint_to_bytes(len(v) + 4, 4) + v)
-        self._cursor = self.cursor()
-        self._process_messages()
 
     def _send_message(self, code, data):
         self._write(
@@ -624,6 +605,31 @@ class Connection(object):
         self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
         self._process_messages(self._cursor)
         self.begin()
+
+    def _open(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((self.host, self.port))
+        DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
+        if self.use_ssl:
+            self._write(_bint_to_bytes(8, 4))
+            self._write(_bint_to_bytes(80877103, 4))    # SSL request
+            if self_read(1) == b'S':
+                self.sock = ssl.wrap_socket(self.sock)
+            else:
+                raise InterfaceError("Server refuses SSL")
+        self.sock.settimeout(self.timeout)
+        v = b''.join([
+            _bint_to_bytes(196608, 4),  # protocol version 3.0
+            b'user\x00', self.user.encode('ascii'), b'\x00',
+            b'database\x00', self.database.encode('ascii'), b'\x00',
+            b'\x00',
+        ])
+        self._write(_bint_to_bytes(len(v) + 4, 4) + v)
+        self._cursor = self.cursor()
+        self._process_messages()
+
+    def reopen(self):
+        self._open()
 
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
