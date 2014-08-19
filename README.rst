@@ -29,7 +29,7 @@ Install as a module
 Example
 -----------------
 
-::
+Query::
 
    import minipg
    conn = minipg.connect(host='localhost',
@@ -40,6 +40,31 @@ Example
    cur.execute('select foo, bar from baz')
    for r in cur.fetchall():
       print(r[0], r[1])
+   conn.close()
+
+COPY TO::
+
+   import minipg
+   conn = minipg.connect(host='localhost',
+                       user='postgres',
+                       password='secret',
+                       database='database_name')
+   f = open('foo.txt', 'bw')
+   conn.execute('COPY foo_table TO stdout')
+   f.close()
+   conn.close()
+
+COPY FROM::
+
+   import minipg
+   conn = minipg.connect(host='localhost',
+                       user='postgres',
+                       password='secret',
+                       database='database_name')
+   f = open('foo.txt', 'br')
+   conn.execute(f, 'COPY foo_table FROM stdin')
+   f.close()
+   conn.close()
 
 
 Restrictions and Unsupported Features
