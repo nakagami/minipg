@@ -350,7 +350,7 @@ def escape_parameter(v):
     elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
         return u"'" + v.replace(u"'", u"''") + u"'"
     elif PY2 and t == str:    # str or binary in PY2
-        v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 else c for c in v])
+        v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
         return "'" + v.replace("'", "''") + "'"
     elif t == bytes:        # binary
         return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
