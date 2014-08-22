@@ -639,9 +639,10 @@ class Connection(object):
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
-        self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-        self._process_messages(self._cursor)
-        self.begin()
+        if self.sock:
+            self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
+            self._process_messages(self._cursor)
+            self.begin()
 
     def reopen(self):
         self.close()
