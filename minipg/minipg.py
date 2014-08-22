@@ -515,7 +515,7 @@ class Connection(object):
                 for i in range(len(row)):
                     row[i] = _decode_column(row[i], obj.description[i][1], self.encoding)
 
-                obj._rows.append(row)
+                obj._rows.append(tuple(row))
                 DEBUG_OUTPUT("\t\t", row)
             elif code == PG_B_NOTICE_RESPONSE:
                 DEBUG_OUTPUT("NOTICE_RESPONSE:", binascii.b2a_hex(data))
