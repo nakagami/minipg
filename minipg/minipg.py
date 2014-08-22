@@ -345,14 +345,17 @@ class UTC(datetime.tzinfo):
 #------------------------------------------------------------------------------
 def escape_parameter(v):
     t = type(v)
+    if PY2 and t == str:
+        for c in v:
+            if ord(c) < 32 or ord(c) > 127:
+                t = bytes
+                break
     if v is None:
         return 'NULL'
     elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
-        return "'" + v.replace("'", "''") + "'"
-    elif PY2 and t == str:  # binary
-        return "'" + ''.join(['\\%03o' % (ord(c),) for c in v]) + "'::bytea"
+        return u"'" + v.replace(u"'", u"''") + u"'"
     elif t == bytes:        # binary
-        return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
+        return "'" + ''.join(['\\%03o' % (ord(c) if PY2 else c, ) for c in v]) + "'::bytea"
     elif t == bool:
         return u"'t'" if v else u"'f'"
     elif t == int or t == long:
