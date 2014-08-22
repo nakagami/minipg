@@ -163,7 +163,7 @@ class TestMiniPG(unittest.TestCase):
               b        bytea
             )
         """)
-        data = b'\x00\x01\x02abc'
+        data = bytearray(b'\x00\x01\x02abc')
         cur.execute("insert into test_binary (b) values (%s)", (data,))
         cur.execute("select b from test_binary")
         self.assertEqual(cur.fetchone()[0], data)
