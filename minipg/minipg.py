@@ -468,7 +468,7 @@ class Connection(object):
                 DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
             elif code == PG_B_COMMAND_COMPLETE:
                 command = data[:-1].decode('ascii')
-                for k in ('SELECT', 'UPDATE', 'INSERT'):
+                for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
                     if command[:len(k)] == k:
                         last_token = data[:-1].decode('ascii').split(' ')[-1]
                         obj.rowcount = int(last_token)
