@@ -613,6 +613,7 @@ class Connection(object):
     def execute(self, obj, query, args=()):
         if args:
             escaped_args = tuple(escape_parameter(arg) for arg in args)
+            query = query.replace('%', '%%').replace('%%s', '%s')
             query = query % escaped_args
         if not self.in_transaction:
             self._send_message(PG_F_QUERY, b"BEGIN\x00")
