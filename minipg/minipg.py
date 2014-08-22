@@ -367,6 +367,7 @@ class Cursor(object):
         self.description = []
         self._rows = []
         self._current_row = -1
+        self.rowcount = 0
 
     def execute(self, query, args=()):
         DEBUG_OUTPUT('Cursor::execute()', query, args)
@@ -396,10 +397,6 @@ class Cursor(object):
 
     def fetchall(self):
         return self._rows
-
-    @property
-    def rowcount(self):
-        return len(self._rows)
 
     def close(self):
         self.connection = None
@@ -470,6 +467,12 @@ class Connection(object):
             elif code == PG_B_BACKEND_KEY_DATA:
                 DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
             elif code == PG_B_COMMAND_COMPLETE:
+                command = data[:-1].decode('ascii')
+                for k in ('SELECT', 'UPDATE', 'INSERT'):
+                    if command[:len(k)] == k:
+                        last_token = data[:-1].decode('ascii').split(' ')[-1]
+                        obj.rowcount = int(last_token)
+                        obj._current_row = -1
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
             elif code == PG_B_ROW_DESCRIPTION:
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
