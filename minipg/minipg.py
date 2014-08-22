@@ -379,8 +379,12 @@ class Cursor(object):
         self.connection.execute(self, query, args)
 
     def executemany(self, query, seq_of_params):
+        DEBUG_OUTPUT('Cursor::executemany()', query, seq_of_params)
+        rowcount = 0
         for params in seq_of_params:
             self.execute(query, params)
+            rowcount += self.rowcount
+        self.rowcount = rowcount
 
     def fetchone(self):
         self._current_row += 1
