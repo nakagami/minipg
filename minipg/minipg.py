@@ -355,6 +355,8 @@ def escape_parameter(v):
         return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
     elif t == bool:
         return u"'t'" if v else u"'f'"
+    elif t == int or t == long:
+        return str(v)
     else:
         return "'" + str(v) + "'"
 
@@ -373,6 +375,10 @@ class Cursor(object):
         self.query = query
         self.args = args
         self.connection.execute(self, query, args)
+
+    def executemany(self, query, seq_of_params):
+        for params in seq_of_params:
+            self.execute(query, params)
 
     def fetchone(self):
         self._current_row += 1
@@ -587,6 +593,9 @@ class Connection(object):
         self._cursor = self.cursor()
         self._process_messages()
 
+    def _is_connect(self):
+        return bool(self.sock)
+
     def _close(self):
         self.sock.close()
         self.sock = None
@@ -615,15 +624,18 @@ class Connection(object):
         self.autocommit = autocommit
 
     def begin(self):
+        DEBUG_OUTPUT('BEGIN')
         self._send_message(PG_F_QUERY, b"BEGIN\x00")
         self._process_messages(self._cursor)
 
     def commit(self):
+        DEBUG_OUTPUT('COMMIT')
         self._send_message(PG_F_QUERY, b"COMMIT\x00")
         self._process_messages(self._cursor)
         self.begin()
 
     def rollback(self):
+        DEBUG_OUTPUT('ROLLBACK')
         self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
         self._process_messages(self._cursor)
         self.begin()
