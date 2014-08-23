@@ -600,7 +600,6 @@ class Connection(object):
             b'\x00',
         ])
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
-        self._cursor = self.cursor()
         self._process_messages()
 
     def _is_connect(self):
@@ -637,19 +636,19 @@ class Connection(object):
     def begin(self):
         DEBUG_OUTPUT('BEGIN')
         self._send_message(PG_F_QUERY, b"BEGIN\x00")
-        self._process_messages(self._cursor)
+        self._process_messages()
 
     def commit(self):
         DEBUG_OUTPUT('COMMIT')
         self._send_message(PG_F_QUERY, b"COMMIT\x00")
-        self._process_messages(self._cursor)
+        self._process_messages()
         self.begin()
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-            self._process_messages(self._cursor)
+            self._process_messages()
             self.begin()
 
     def reopen(self):
