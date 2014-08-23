@@ -90,6 +90,9 @@ class TestMiniPG(unittest.TestCase):
 
     def test_trans(self):
         cur = self.connection.cursor()
+        cur.execute("show transaction isolation level")
+        self.assertEqual(len(cur.fetchall()), 1)
+
         cur.execute("""
             create temporary table test_trans (
               pk        serial,

@@ -476,6 +476,9 @@ class Connection(object):
                     if command[:len(k)] == k:
                         obj.rowcount = int(data[:-1].decode('ascii').split(' ')[-1])
                         obj._current_row = -1
+                    elif command == 'SHOW':
+                        obj.rowcount = 1
+                        obj._current_row = -1
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", data[:-1].decode('ascii'))
             elif code == PG_B_ROW_DESCRIPTION:
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
