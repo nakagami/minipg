@@ -292,7 +292,6 @@ def escape_parameter(v):
         return "'" + str(v) + "'"
 
 
-
 Date = datetime.date
 Time = datetime.time
 TimeDelta = datetime.timedelta
@@ -422,7 +421,6 @@ class Cursor(object):
     def next(self):
         return self.__next__()
 
-
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
         DEBUG_OUTPUT("Connection::__init__()")
@@ -437,7 +435,6 @@ class Connection(object):
         self.autocommit = False
         self.in_transaction = False
         self._open()
-
 
     def _send_message(self, code, data):
         self._write(
