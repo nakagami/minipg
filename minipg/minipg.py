@@ -25,19 +25,18 @@
 
 from __future__ import print_function
 import sys
-import decimal
 import socket
-import hashlib
-import binascii
+import decimal
 import datetime
-
-PY2 = sys.version_info[0] == 2
+import binascii
 
 VERSION = (0, 2, 2)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
 paramstyle = 'format'
+
+PY2 = sys.version_info[0] == 2
 
 DEBUG = False
 
@@ -48,40 +47,8 @@ def DEBUG_OUTPUT(*argv):
         print(s, end=' ', file=sys.stdout)
     print(file=sys.stdout)
 
-Date = datetime.date
-Time = datetime.time
-TimeDelta = datetime.timedelta
-Timestamp = datetime.datetime
-def DateFromTicks(ticks):
-    return apply(Date,time.localtime(ticks)[:3])
-def TimeFromTicks(ticks):
-    return apply(Time,time.localtime(ticks)[3:6])
-def TimestampFromTicks(ticks):
-    return apply(Timestamp,time.localtime(ticks)[:6])
-def Binary(b):
-    return bytes(b)
-
-class DBAPITypeObject:
-    def __init__(self,*values):
-        self.values = values
-    def __cmp__(self,other):
-        if other in self.values:
-            return 0
-        if other < self.values:
-            return 1
-        else:
-            return -1
-STRING = DBAPITypeObject(str)
-BINARY = DBAPITypeObject(bytes)
-NUMBER = DBAPITypeObject(int, decimal.Decimal)
-DATETIME = DBAPITypeObject(datetime.datetime, datetime.date, datetime.time)
-DATE = DBAPITypeObject(datetime.date)
-TIME = DBAPITypeObject(datetime.time)
-ROWID = DBAPITypeObject()
-
-# Format Codes
-FC_BINARY = 1
-FC_TEXT = 0
+#-----------------------------------------------------------------------------
+# http://www.postgresql.org/docs/9.3/static/protocol.html
 
 # http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
 PG_B_AUTHENTICATION = b'R'
@@ -205,32 +172,17 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _bytes_to_bint(b):     # Read as big endian
-    r = b[0]
-    if PY2:
-        r = ord(r)
-    for i in b[1:]:
-        if PY2:
-            i = ord(i)
-        r = r * 256 + i
-    return r
-
-def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
-    v = abs(val)
-    b = []
-    for n in range(nbytes):
-        b.append((v >> (8*(nbytes - n - 1)) & 0xff))
-    if val < 0:
-        for i in range(nbytes):
-            b[i] = ~b[i] + 256
-        b[-1] += 1
-        for i in range(nbytes):
-            if b[nbytes -i -1] == 256:
-                b[nbytes -i -1] = 0
-                b[nbytes -i -2] += 1
-    return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
-
 def _decode_column(data, oid, encoding):
+    class UTC(datetime.tzinfo):
+        def utcoffset(self, dt):
+            return datetime.timedelta(0)
+
+        def dst(self, dt):
+            return datetime.timedelta(0)
+
+        def tzname(self, dt):
+            return "UTC"
+
     if data is None:
         return data
     data = data.decode(encoding)
@@ -294,6 +246,84 @@ def _decode_column(data, oid, encoding):
     DEBUG_OUTPUT('_decode_column()', data, oid)
     return data
 
+# ----------------------------------------------------------------------------
+
+def _bytes_to_bint(b):     # Read as big endian
+    r = b[0]
+    if PY2:
+        r = ord(r)
+    for i in b[1:]:
+        if PY2:
+            i = ord(i)
+        r = r * 256 + i
+    return r
+
+def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
+    v = abs(val)
+    b = []
+    for n in range(nbytes):
+        b.append((v >> (8*(nbytes - n - 1)) & 0xff))
+    if val < 0:
+        for i in range(nbytes):
+            b[i] = ~b[i] + 256
+        b[-1] += 1
+        for i in range(nbytes):
+            if b[nbytes -i -1] == 256:
+                b[nbytes -i -1] = 0
+                b[nbytes -i -2] += 1
+    return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
+
+def escape_parameter(v):
+    t = type(v)
+    if v is None:
+        return 'NULL'
+    elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
+        return u"'" + v.replace(u"'", u"''") + u"'"
+    elif PY2 and t == str:    # PY2 str
+        v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
+        return "'" + v.replace("'", "''") + "'"
+    elif t == bytearray or t == bytes:        # binary
+        return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
+    elif t == bool:
+        return u"'t'" if v else u"'f'"
+    elif t == int or t == float or t == long:
+        return str(v)
+    else:
+        return "'" + str(v) + "'"
+
+
+
+Date = datetime.date
+Time = datetime.time
+TimeDelta = datetime.timedelta
+Timestamp = datetime.datetime
+def DateFromTicks(ticks):
+    return apply(Date,time.localtime(ticks)[:3])
+def TimeFromTicks(ticks):
+    return apply(Time,time.localtime(ticks)[3:6])
+def TimestampFromTicks(ticks):
+    return apply(Timestamp,time.localtime(ticks)[:6])
+def Binary(b):
+    return bytes(b)
+
+class DBAPITypeObject:
+    def __init__(self,*values):
+        self.values = values
+    def __cmp__(self,other):
+        if other in self.values:
+            return 0
+        if other < self.values:
+            return 1
+        else:
+            return -1
+STRING = DBAPITypeObject(str)
+BINARY = DBAPITypeObject(bytes)
+NUMBER = DBAPITypeObject(int, decimal.Decimal)
+DATETIME = DBAPITypeObject(datetime.datetime, datetime.date, datetime.time)
+DATE = DBAPITypeObject(datetime.date)
+TIME = DBAPITypeObject(datetime.time)
+ROWID = DBAPITypeObject()
+
 class Error(Exception):
     def __init__(self, errcode, message):
         self._errcode = errcode
@@ -331,35 +361,6 @@ class DataError(DatabaseError):
 class NotSupportedError(DatabaseError):
     def __init__(self):
         DatabaseError.__init__(self, 'NotSupportedError')
-
-class UTC(datetime.tzinfo):
-    def utcoffset(self, dt):
-        return datetime.timedelta(0)
-
-    def dst(self, dt):
-        return datetime.timedelta(0)
-
-    def tzname(self, dt):
-        return "UTC"
-
-#------------------------------------------------------------------------------
-def escape_parameter(v):
-    t = type(v)
-    if v is None:
-        return 'NULL'
-    elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
-        return u"'" + v.replace(u"'", u"''") + u"'"
-    elif PY2 and t == str:    # PY2 str
-        v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
-        return "'" + v.replace("'", "''") + "'"
-    elif t == bytearray or t == bytes:        # binary
-        return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
-    elif t == bool:
-        return u"'t'" if v else u"'f'"
-    elif t == int or t == float or t == long:
-        return str(v)
-    else:
-        return "'" + str(v) + "'"
 
 class Cursor(object):
     def __init__(self, connection):
@@ -460,6 +461,7 @@ class Connection(object):
                 if auth_method == 0:      # trust
                     pass
                 elif auth_method == 5:    # md5
+                    import hashlib
                     salt = data[4:]
                     hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
