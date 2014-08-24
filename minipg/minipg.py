@@ -587,6 +587,8 @@ class Connection(object):
         return r
 
     def _write(self, b):
+        if not self.sock:
+            raise OperationalError(u"08003", "Lost connection")
         n = 0
         while (n < len(b)):
             n += self.sock.send(b[n:])
