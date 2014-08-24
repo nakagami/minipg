@@ -581,6 +581,8 @@ class Connection(object):
         self.close()
 
     def _read(self, ln):
+        if not self.sock:
+            raise OperationalError(u"08003", "Lost connection")
         r = b''
         while len(r) < ln:
             r += self.sock.recv(ln-len(r))
