@@ -41,7 +41,7 @@ apilevel = '2.0'
 threadsafety = 1
 paramstyle = 'format'
 
-DEBUG = True
+DEBUG = False
 
 def DEBUG_OUTPUT(*argv):
     if not DEBUG:
@@ -441,6 +441,7 @@ class Connection(object):
         self._flush()
 
     def _process_messages(self, obj=None):
+        err = None
         while True:
             code = self._read(1)
             ln = _bytes_to_bint(self._read(4)) - 4
@@ -460,7 +461,7 @@ class Connection(object):
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
                     self._send_message(PG_F_PASSWORD_MESSAGE, b'md5'+hash2+'\x00')
                 else:
-                    raise InterfaceError("Authentication method %d not supported." % (auth_method,))
+                    err = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == PG_B_PARAMETER_STATUS:
                 k, v, _ = data.split(b'\x00')
                 k = k.decode('ascii')
@@ -537,9 +538,9 @@ class Connection(object):
                 errcode = err[1][1:].decode(self.encoding)
                 message = err[2][1:].decode(self.encoding)
                 if errcode[:2] == u'23':
-                    raise IntegrityError(errcode, message)
+                    err = IntegrityError(errcode, message)
                 else:
-                    raise ProgrammingError(errcode, message)
+                    err = ProgrammingError(errcode, message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 is_binary = data[0] == '\x01'
                 num_columns = _bytes_to_bint(data[1:3])
@@ -564,6 +565,8 @@ class Connection(object):
                 self._flush()
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
+        if err:
+            raise err
         return
 
     def __enter__(self):
