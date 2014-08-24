@@ -28,7 +28,6 @@ import sys
 import socket
 import decimal
 import datetime
-import binascii
 
 VERSION = (0, 2, 2)
 __version__ = '%s.%s.%s' % VERSION
@@ -46,6 +45,10 @@ def DEBUG_OUTPUT(*argv):
     for s in argv:
         print(s, end=' ', file=sys.stdout)
     print(file=sys.stdout)
+
+def HEX(data):
+    import binascii
+    return binascii.b2a_hex(data)
 
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.3/static/protocol.html
@@ -473,7 +476,7 @@ class Connection(object):
                 if k == 'server_encoding':
                     self.encoding = v
             elif code == PG_B_BACKEND_KEY_DATA:
-                DEBUG_OUTPUT("BACKEND_KEY_DATA:", binascii.b2a_hex(data))
+                DEBUG_OUTPUT("BACKEND_KEY_DATA:", HEX(data))
             elif code == PG_B_COMMAND_COMPLETE:
                 command = data[:-1].decode('ascii')
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
@@ -487,7 +490,7 @@ class Connection(object):
                             obj._current_row = -1
                             break
             elif code == PG_B_ROW_DESCRIPTION:
-                DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
+                DEBUG_OUTPUT("ROW_DESCRIPTION:", HEX(data))
                 count = _bytes_to_bint(data[0:2])
                 obj.description = [None] * count
                 n = 2
@@ -513,7 +516,7 @@ class Connection(object):
                     idx += 1
                 DEBUG_OUTPUT('\t\t', obj.description)
             elif code == PG_B_DATA_ROW:
-                DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
+                DEBUG_OUTPUT("DATA_ROW:", HEX(data))
                 n = 2
                 row = []
                 while n < len(data):
@@ -531,11 +534,11 @@ class Connection(object):
                 obj._rows.append(tuple(row))
                 DEBUG_OUTPUT("\t\t", row)
             elif code == PG_B_NOTICE_RESPONSE:
-                DEBUG_OUTPUT("NOTICE_RESPONSE:", binascii.b2a_hex(data))
+                DEBUG_OUTPUT("NOTICE_RESPONSE:", HEX(data))
                 for s in data.split(b'\x00'):
                     DEBUG_OUTPUT("\t\t", s.decode(self.encoding))
             elif code == PG_B_ERROR_RESPONSE:
-                DEBUG_OUTPUT("ERROR_RESPONSE:", binascii.b2a_hex(data))
+                DEBUG_OUTPUT("ERROR_RESPONSE:", HEX(data))
                 err = data.split(b'\x00')
                 for b in err:
                     DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
@@ -569,7 +572,7 @@ class Connection(object):
                 self._write(PG_COPY_DONE + b'\x00\x00\x00\x04' + PG_F_SYNC + b'\x00\x00\x00\x04')
                 self._flush()
             else:
-                DEBUG_OUTPUT("SKIP:", code, ln, binascii.b2a_hex(data))
+                DEBUG_OUTPUT("SKIP:", code, ln, HEX(data))
         if err:
             raise err
         return
