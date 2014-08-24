@@ -474,39 +474,40 @@ class Connection(object):
             elif code == PG_B_COMMAND_COMPLETE:
                 command = data[:-1].decode('ascii')
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
-                for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
-                    if command[:len(k)] == k:
-                        obj.rowcount = int(command.split(' ')[-1])
-                        obj._current_row = -1
-                    elif command == 'SHOW':
-                        obj.rowcount = 1
-                        obj._current_row = -1
+                if command == 'SHOW':
+                    obj.rowcount = 1
+                    obj._current_row = -1
+                else:
+                    for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
+                        if command[:len(k)] == k:
+                            obj.rowcount = int(command.split(' ')[-1])
+                            obj._current_row = -1
+                            break
             elif code == PG_B_ROW_DESCRIPTION:
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", binascii.b2a_hex(data))
-                if obj is not None:
-                    count = _bytes_to_bint(data[0:2])
-                    obj.description = [None] * count
-                    n = 2
-                    idx = 0
-                    for i in range(count):
-                        name = data[n:n+data[n:].find(b'\x00')]
-                        n += len(name) + 1
-                        table_oid = _bytes_to_bint(data[n:n+4])
-                        table_pos = _bytes_to_bint(data[n+4:n+6])
-                        modifier = _bytes_to_bint(data[n+12:n+16]),     # modifier
-                        format = _bytes_to_bint(data[n+16:n+18]),       # format
-                        field = (
-                            name,
-                            _bytes_to_bint(data[n+6:n+10]),     # type oid
-                            None,
-                            _bytes_to_bint(data[n+10:n+12]),    # size
-                            None,
-                            None,
-                            None,
-                        )
-                        n += 18
-                        obj.description[idx] = field
-                        idx += 1
+                count = _bytes_to_bint(data[0:2])
+                obj.description = [None] * count
+                n = 2
+                idx = 0
+                for i in range(count):
+                    name = data[n:n+data[n:].find(b'\x00')]
+                    n += len(name) + 1
+                    table_oid = _bytes_to_bint(data[n:n+4])
+                    table_pos = _bytes_to_bint(data[n+4:n+6])
+                    modifier = _bytes_to_bint(data[n+12:n+16]),     # modifier
+                    format = _bytes_to_bint(data[n+16:n+18]),       # format
+                    field = (
+                        name,
+                        _bytes_to_bint(data[n+6:n+10]),     # type oid
+                        None,
+                        _bytes_to_bint(data[n+10:n+12]),    # size
+                        None,
+                        None,
+                        None,
+                    )
+                    n += 18
+                    obj.description[idx] = field
+                    idx += 1
                 DEBUG_OUTPUT('\t\t', obj.description)
             elif code == PG_B_DATA_ROW:
                 DEBUG_OUTPUT("DATA_ROW:", binascii.b2a_hex(data))
