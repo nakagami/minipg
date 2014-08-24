@@ -581,7 +581,10 @@ class Connection(object):
         self.close()
 
     def _read(self, ln):
-        return self.sock.recv(ln)
+        r = b''
+        while len(r) < ln:
+            r += self.sock.recv(ln-len(r))
+        return r
 
     def _write(self, b):
         n = 0
