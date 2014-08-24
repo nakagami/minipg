@@ -23,10 +23,10 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 ##############################################################################
-import minipg
 import unittest
-import minipg
 import io
+import decimal
+import minipg
 
 class TestMiniPG(unittest.TestCase):
     host='localhost'
@@ -80,6 +80,8 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 1)
         cur.execute("select count(*) from test_basic where b1=%s", (False,))
         self.assertEqual(cur.fetchone()[0], 2)
+        cur.execute("select i2 from test_basic where dec=%s", (decimal.Decimal("1.1"),))
+        self.assertEqual(cur.fetchone()[0], 1)
 
         cur.execute("select to_json(test_basic) from test_basic")
         self.assertEqual(len(cur.fetchall()), 3)
