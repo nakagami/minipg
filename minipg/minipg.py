@@ -289,7 +289,7 @@ def escape_parameter(v):
         return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
     elif t == bool:
         return u"'t'" if v else u"'f'"
-    elif t == int or t == float or t == long:
+    elif t == int or t == float or t == decimal.Decimal or (PY2 and t == long):
         return str(v)
     else:
         return "'" + str(v) + "'"
