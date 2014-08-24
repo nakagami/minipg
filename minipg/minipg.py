@@ -378,7 +378,11 @@ class Cursor(object):
         self._current_row = -1
         self.query = query
         self.args = args
-        self.connection.execute(self, query, args)
+        if args:
+            escaped_args = tuple(escape_parameter(arg) for arg in args)
+            query = query.replace('%', '%%').replace('%%s', '%s')
+            query = query % escaped_args
+        self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
         DEBUG_OUTPUT('Cursor::executemany()', query, seq_of_params)
@@ -618,11 +622,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def execute(self, obj, query, args=()):
-        if args:
-            escaped_args = tuple(escape_parameter(arg) for arg in args)
-            query = query.replace('%', '%%').replace('%%s', '%s')
-            query = query % escaped_args
+    def execute(self, query, obj):
         if not self.in_transaction:
             self._send_message(PG_F_QUERY, b"BEGIN\x00")
             self._process_messages(obj)
