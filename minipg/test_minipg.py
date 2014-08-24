@@ -186,6 +186,7 @@ class TestMiniPG(unittest.TestCase):
               s         varchar(255)
             )
         """)
+        minipg.DEBUG=True
         cur.execute(u"""
             insert into test_copy (b1, i2 ,s) values
                 (TRUE, 1, 'あいうえお'),
@@ -193,6 +194,7 @@ class TestMiniPG(unittest.TestCase):
                 (FALSE, 3, 'ABC''s')
         """)
         self.assertEqual(cur.rowcount, 3)
+        minipg.DEBUG=False
         self.connection.commit()
 
         # COPY TO
