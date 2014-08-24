@@ -50,7 +50,7 @@ COPY TO::
                        password='secret',
                        database='database_name')
    f = open('foo.txt', 'bw')
-   conn.execute('COPY foo_table TO stdout')
+   conn.execute('COPY foo_table TO stdout', f)
    f.close()
    conn.close()
 
@@ -62,7 +62,7 @@ COPY FROM::
                        password='secret',
                        database='database_name')
    f = open('foo.txt', 'br')
-   conn.execute(f, 'COPY foo_table FROM stdin')
+   conn.execute('COPY foo_table FROM stdin', f)
    f.close()
    conn.close()
 
