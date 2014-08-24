@@ -27,11 +27,9 @@ from __future__ import print_function
 import sys
 import decimal
 import socket
-import struct
 import hashlib
 import binascii
 import datetime
-import re
 
 PY2 = sys.version_info[0] == 2
 
@@ -207,15 +205,15 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _bytes_to_bint(b, u=False):     # Read as big endian
-    if u:
-        fmtmap = {1: 'B', 2: '>H', 4: '>L', 8: '>Q'}
-    else:
-        fmtmap = {1: 'b', 2: '>h', 4: '>l', 8: '>q'}
-    fmt = fmtmap.get(len(b))
-    if fmt is None:
-        raise InternalError
-    return struct.unpack(fmt, b)[0]
+def _bytes_to_bint(b):     # Read as big endian
+    r = b[0]
+    if PY2:
+        r = ord(r)
+    for i in b[1:]:
+        if PY2:
+            i = ord(i)
+        r = r * 256 + i
+    return r
 
 def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
     v = abs(val)
@@ -520,11 +518,12 @@ class Connection(object):
                 n = 2
                 row = []
                 while n < len(data):
-                    ln = _bytes_to_bint(data[n:n+4])
-                    n += 4
-                    if ln == -1:
+                    if data[n:n+4] == b'\xff\xff\xff\xff':
                         row.append(None)
+                        n += 4
                     else:
+                        ln = _bytes_to_bint(data[n:n+4])
+                        n += 4
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
