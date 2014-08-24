@@ -443,7 +443,6 @@ class Connection(object):
         self._write(
             b''.join([code, _bint_to_bytes(len(data) + 4, 4), data, PG_F_FLUSH, b'\x00\x00\x00\x04'])
         )
-        self._flush()
 
     def _process_messages(self, obj=None):
         err = None
@@ -568,9 +567,7 @@ class Connection(object):
                         break
                     self._write(PG_COPY_DATA + _bint_to_bytes(len(buf) + 4, 4))
                     self._write(buf)
-                    self._flush()
                 self._write(PG_COPY_DONE + b'\x00\x00\x00\x04' + PG_F_SYNC + b'\x00\x00\x00\x04')
-                self._flush()
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, HEX(data))
         if err:
@@ -587,10 +584,9 @@ class Connection(object):
         return self.sock.recv(ln)
 
     def _write(self, b):
-        return self.sock.send(b)
-
-    def _flush(self):
-        pass
+        n = 0
+        while (n < len(b)):
+            n += self.sock.send(b[n:])
 
     def _open(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
