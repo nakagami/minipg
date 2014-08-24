@@ -47,8 +47,8 @@ def DEBUG_OUTPUT(*argv):
     if not DEBUG:
         return
     for s in argv:
-        print(s, end=' ', file=sys.stderr)
-    print(file=sys.stderr)
+        print(s, end=' ', file=sys.stdout)
+    print(file=sys.stdout)
 
 Date = datetime.date
 Time = datetime.time
