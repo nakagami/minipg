@@ -192,6 +192,7 @@ class TestMiniPG(unittest.TestCase):
                 (FALSE, 2, 'かきくけこ'),
                 (FALSE, 3, 'ABC''s')
         """)
+        self.assertEqual(cur.rowcount, 3)
         self.connection.commit()
 
         # COPY TO
