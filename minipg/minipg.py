@@ -546,7 +546,7 @@ class Connection(object):
                 if errcode[:2] == u'23':
                     err = IntegrityError( message)
                 else:
-                    err = ProgrammingError(message)
+                    err = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 is_binary = data[0] == '\x01'
                 num_columns = _bytes_to_bint(data[1:3])

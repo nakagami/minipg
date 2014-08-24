@@ -85,7 +85,7 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(len(cur.fetchall()), 3)
         try:
             cur.execute("E")
-        except minipg.ProgrammingError as e:
+        except minipg.DatabaseError as e:
             self.assertEqual(str(e), u'42601:syntax error at or near "E"')
 
     def test_trans(self):
