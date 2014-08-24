@@ -327,13 +327,12 @@ TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
 
 class Error(Exception):
-    def __init__(self, errcode, message):
-        self._errcode = errcode
-        self._message = message
+    def __init__(self, message):
+        self.message = message
     def __str__(self):
-        return self._errcode + u":" + self._message
+        return self.message
     def __repr__(self):
-        return self._errcode + u":" + self._message
+        return self.message
 
 class InterfaceError(Error):
     pass
@@ -543,11 +542,11 @@ class Connection(object):
                     DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[1][1:].decode(self.encoding)
-                message = err[2][1:].decode(self.encoding)
+                message = errcode + u':' + err[2][1:].decode(self.encoding)
                 if errcode[:2] == u'23':
-                    err = IntegrityError(errcode, message)
+                    err = IntegrityError( message)
                 else:
-                    err = ProgrammingError(errcode, message)
+                    err = ProgrammingError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 is_binary = data[0] == '\x01'
                 num_columns = _bytes_to_bint(data[1:3])
@@ -582,7 +581,7 @@ class Connection(object):
 
     def _read(self, ln):
         if not self.sock:
-            raise OperationalError(u"08003", "Lost connection")
+            raise OperationalError(u"08003:Lost connection")
         r = b''
         while len(r) < ln:
             r += self.sock.recv(ln-len(r))
@@ -590,7 +589,7 @@ class Connection(object):
 
     def _write(self, b):
         if not self.sock:
-            raise OperationalError(u"08003", "Lost connection")
+            raise OperationalError(u"08003:Lost connection")
         n = 0
         while (n < len(b)):
             n += self.sock.send(b[n:])
