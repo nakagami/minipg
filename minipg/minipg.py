@@ -302,6 +302,8 @@ class Error(Exception):
         self._message = message
     def __str__(self):
         return self._errcode + u":" + self._message
+    def __repr__(self):
+        return self._errcode + u":" + self._message
 
 class InterfaceError(Error):
     pass
