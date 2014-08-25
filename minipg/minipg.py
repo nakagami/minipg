@@ -29,7 +29,7 @@ import socket
 import decimal
 import datetime
 
-VERSION = (0, 2, 2)
+VERSION = (0, 2, 3)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
