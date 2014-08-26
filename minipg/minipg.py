@@ -44,8 +44,8 @@ def DEBUG_OUTPUT(*argv):
     if not DEBUG:
         return
     for s in argv:
-        print(s, end=' ', file=sys.stdout)
-    print(file=sys.stdout)
+        print(s, end=' ', file=sys.stderr)
+    print(file=sys.stderr)
 
 def HEX(data):
     import binascii
@@ -632,9 +632,6 @@ class Connection(object):
     def _is_connect(self):
         return bool(self.sock)
 
-    def _close(self):
-        self.sock.close()
-        self.sock = None
 
     def cursor(self):
         return Cursor(self)
@@ -682,7 +679,8 @@ class Connection(object):
         DEBUG_OUTPUT('Connection::close()')
         if self.sock:
             self._write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
-            self._close()
+            self.sock.close()
+            self.sock = None
 
 def connect(host, user, password, database, port=5432, timeout=60, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
