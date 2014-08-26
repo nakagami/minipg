@@ -453,7 +453,7 @@ class Connection(object):
         )
 
     def _process_messages(self, obj=None):
-        err = None
+        errclass = None
         while True:
             code = self._read(1)
             ln = _bytes_to_bint(self._read(4)) - 4
@@ -474,7 +474,7 @@ class Connection(object):
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
                     self._send_message(PG_F_PASSWORD_MESSAGE, b'md5'+hash2+'\x00')
                 else:
-                    err = InterfaceError("Authentication method %d not supported." % (auth_method,))
+                    errclass = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == PG_B_PARAMETER_STATUS:
                 k, v, _ = data.split(b'\x00')
                 k = k.decode('ascii')
@@ -553,9 +553,9 @@ class Connection(object):
                 errcode = err[1][1:].decode(self.encoding)
                 message = errcode + u':' + err[2][1:].decode(self.encoding)
                 if errcode[:2] == u'23':
-                    err = IntegrityError( message)
+                    errclass = IntegrityError( message)
                 else:
-                    err = DatabaseError(message)
+                    errclass = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 is_binary = data[0] == '\x01'
                 num_columns = _bytes_to_bint(data[1:3])
@@ -578,8 +578,8 @@ class Connection(object):
                 self._write(PG_COPY_DONE + b'\x00\x00\x00\x04' + PG_F_SYNC + b'\x00\x00\x00\x04')
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, HEX(data))
-        if err:
-            raise err
+        if errclass:
+            raise errclass
         return
 
     def __enter__(self):
