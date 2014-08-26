@@ -465,7 +465,7 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 DEBUG_OUTPUT("READY_FOR_QUERY:", data)
-                self.in_transaction = (data in (b'I', b'T'))
+                self.in_transaction = data != b'I'
                 break
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
@@ -637,7 +637,7 @@ class Connection(object):
         return Cursor(self)
 
     def execute(self, query, obj):
-        if not self.in_transaction:
+        if not self.in_transaction and not self.autocommit:
             self._send_message(PG_F_QUERY, b"BEGIN\x00")
             self._process_messages(obj)
         DEBUG_OUTPUT('Connection::execute()', query)
@@ -662,14 +662,12 @@ class Connection(object):
         DEBUG_OUTPUT('COMMIT')
         self._send_message(PG_F_QUERY, b"COMMIT\x00")
         self._process_messages()
-        self.begin()
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
             self._process_messages()
-            self.begin()
 
     def reopen(self):
         self.close()
