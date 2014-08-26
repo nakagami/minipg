@@ -290,9 +290,14 @@ def escape_parameter(v):
         return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
     elif t == bool:
         return u"'t'" if v else u"'f'"
-    elif t == type(t) == time.struct_time:
+    elif t == time.struct_time:
         return u'%04d-%02d-%02d %02d:%02d:%02d' % (
             v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
+    elif t == datetime.timedelta:
+        if v.seconds:
+            return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
+        else:
+            return u"interval '%d'" % (v.days, )
     elif t == int or t == float or t == decimal.Decimal or (PY2 and t == long):
         return str(v)
     else:
