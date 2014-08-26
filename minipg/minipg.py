@@ -637,7 +637,7 @@ class Connection(object):
         return Cursor(self)
 
     def execute(self, query, obj):
-        if not self.in_transaction and not self.autocommit:
+        if not self.in_transaction:
             self.begin()
         DEBUG_OUTPUT('Connection::execute()', query)
         self._send_message(
@@ -646,8 +646,7 @@ class Connection(object):
         )
         self._process_messages(obj)
         if self.autocommit:
-            self._send_message(PG_F_QUERY, b"COMMIT\x00")
-            self._process_messages(obj)
+            self.commit()
 
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
@@ -659,14 +658,17 @@ class Connection(object):
 
     def commit(self):
         DEBUG_OUTPUT('COMMIT')
-        self._send_message(PG_F_QUERY, b"COMMIT\x00")
-        self._process_messages()
+        if self.sock:
+            self._send_message(PG_F_QUERY, b"COMMIT\x00")
+            self._process_messages()
+            self.begin()
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
             self._process_messages()
+            self.begin()
 
     def reopen(self):
         self.close()
