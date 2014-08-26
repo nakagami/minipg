@@ -638,8 +638,7 @@ class Connection(object):
 
     def execute(self, query, obj):
         if not self.in_transaction and not self.autocommit:
-            self._send_message(PG_F_QUERY, b"BEGIN\x00")
-            self._process_messages(obj)
+            self.begin()
         DEBUG_OUTPUT('Connection::execute()', query)
         self._send_message(
             PG_F_QUERY,
