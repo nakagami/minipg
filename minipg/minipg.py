@@ -245,6 +245,9 @@ def _decode_column(data, oid, encoding):
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
     elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
+    elif oid in (PG_UNKNOWN):
+        DEBUG_OUTPUT('UNKNOWN type')
+        return data
     else:
         if DEBUG:
             raise ValueError(str(oid) + u":" + data)
