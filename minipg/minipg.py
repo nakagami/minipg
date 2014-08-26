@@ -297,7 +297,7 @@ def escape_parameter(v):
         if v.seconds:
             return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
         else:
-            return u"interval '%d'" % (v.days, )
+            return u"interval '%d day'" % (v.days, )
     elif t == int or t == float or t == decimal.Decimal or (PY2 and t == long):
         return str(v)
     else:
