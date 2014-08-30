@@ -496,7 +496,7 @@ class Connection(object):
                     obj.rowcount = 1
                     obj._current_row = -1
                 else:
-                    for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
+                    for k in ('SELECT', 'UPDATE', 'INSERT'):
                         if command[:len(k)] == k:
                             obj.rowcount = int(command.split(' ')[-1])
                             obj._current_row = -1
