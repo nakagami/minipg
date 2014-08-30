@@ -682,7 +682,7 @@ class Connection(object):
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password=None, database=None, port=5432, timeout=60, use_ssl=False):
+def connect(host, user, password='', database=None, port=5432, timeout=60, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
 
