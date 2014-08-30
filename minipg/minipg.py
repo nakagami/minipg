@@ -620,12 +620,13 @@ class Connection(object):
             else:
                 raise InterfaceError("Server refuses SSL")
         self.sock.settimeout(self.timeout)
-        v = b''.join([
-            _bint_to_bytes(196608, 4),  # protocol version 3.0
-            b'user\x00', self.user.encode('ascii'), b'\x00',
-            b'database\x00', self.database.encode('ascii'), b'\x00',
-            b'\x00',
-        ])
+        # protocol version 3.0
+        v = _bint_to_bytes(196608, 4)
+        v += b'user\x00' + self.user.encode('ascii') + b'\x00'
+        if self.database:
+            v += b'database\x00' + self.database.encode('ascii') + b'\x00'
+        v += b'\x00'
+
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
         self._process_messages()
 
@@ -681,7 +682,7 @@ class Connection(object):
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password, database, port=5432, timeout=60, use_ssl=False):
+def connect(host, user, password=None, database=None, port=5432, timeout=60, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
 
