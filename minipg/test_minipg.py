@@ -90,6 +90,8 @@ class TestMiniPG(unittest.TestCase):
         except minipg.DatabaseError as e:
             self.assertEqual(str(e), u'42601:syntax error at or near "E"')
 
+        self.connection.execute("select * from test_basic")
+
     def test_trans(self):
         cur = self.connection.cursor()
         cur.execute("show transaction isolation level")

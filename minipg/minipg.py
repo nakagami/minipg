@@ -492,6 +492,8 @@ class Connection(object):
             elif code == PG_B_BACKEND_KEY_DATA:
                 DEBUG_OUTPUT("BACKEND_KEY_DATA:", HEX(data))
             elif code == PG_B_COMMAND_COMPLETE:
+                if not obj:
+                    continue
                 command = data[:-1].decode('ascii')
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
                 if command == 'SHOW':
@@ -504,6 +506,8 @@ class Connection(object):
                             obj._current_row = -1
                             break
             elif code == PG_B_ROW_DESCRIPTION:
+                if not obj:
+                    continue
                 DEBUG_OUTPUT("ROW_DESCRIPTION:", HEX(data))
                 count = _bytes_to_bint(data[0:2])
                 obj.description = [None] * count
@@ -530,6 +534,8 @@ class Connection(object):
                     idx += 1
                 DEBUG_OUTPUT('\t\t', obj.description)
             elif code == PG_B_DATA_ROW:
+                if not obj:
+                    continue
                 DEBUG_OUTPUT("DATA_ROW:", HEX(data))
                 n = 2
                 row = []
@@ -639,7 +645,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def execute(self, query, obj):
+    def execute(self, query, obj=None):
         if not self.in_transaction:
             self.begin()
         DEBUG_OUTPUT('Connection::execute()', query)
