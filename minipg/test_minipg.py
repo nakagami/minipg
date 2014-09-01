@@ -199,7 +199,7 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(cur.rowcount, 3)
         self.connection.commit()
 
-        # COPY TO
+        # COPY TO stdout
         self.connection.close()
         self.connection.reopen()
         text = b"1\tt\t1\t\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\xe3\x81\x88\xe3\x81\x8a\n2\tf\t2\t\xe3\x81\x8b\xe3\x81\x8d\xe3\x81\x8f\xe3\x81\x91\xe3\x81\x93\n3\tf\t3\tABC's\n"
@@ -207,7 +207,7 @@ class TestMiniPG(unittest.TestCase):
         self.connection.execute(u"copy test_copy to stdout", f)
         self.assertEqual(text, f.getvalue())
 
-        # COPY FROM
+        # COPY FROM stdin
         cur.execute("truncate table test_copy")
         cur.execute("select count(*) from test_copy")
         self.assertEqual(cur.fetchone()[0], 0)
@@ -220,6 +220,18 @@ class TestMiniPG(unittest.TestCase):
         f = io.BytesIO()
         self.connection.execute(u"copy test_copy to stdout", f)
         self.assertEqual(text, f.getvalue())
+
+        # COPY TO file, COPY FROM file
+        self.connection.execute(u"copy test_copy to '/tmp/test_copy.txt'")
+        self.connection.reopen()
+        cur.execute("truncate table test_copy")
+        cur.execute("select count(*) from test_copy")
+        self.assertEqual(cur.fetchone()[0], 0)
+        self.connection.execute(u"copy test_copy from '/tmp/test_copy.txt'")
+        f = io.BytesIO()
+        self.connection.execute(u"copy test_copy to stdout", f)
+        self.assertEqual(text, f.getvalue())
+        self.connection.commit()
 
 if __name__ == "__main__":
     import unittest
