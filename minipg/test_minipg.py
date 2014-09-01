@@ -222,12 +222,12 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(text, f.getvalue())
 
         # COPY TO file, COPY FROM file
-        self.connection.execute(u"copy test_copy to '/tmp/test_copy.txt'")
+        self.connection.execute(u"copy test_copy to '/tmp/minipg_test_copy.txt'")
         self.connection.reopen()
         cur.execute("truncate table test_copy")
         cur.execute("select count(*) from test_copy")
         self.assertEqual(cur.fetchone()[0], 0)
-        self.connection.execute(u"copy test_copy from '/tmp/test_copy.txt'")
+        self.connection.execute(u"copy test_copy from '/tmp/minipg_test_copy.txt'")
         f = io.BytesIO()
         self.connection.execute(u"copy test_copy to stdout", f)
         self.assertEqual(text, f.getvalue())
