@@ -385,7 +385,7 @@ class Cursor(object):
         self.description = []
         self._rows = []
         self._current_row = -1
-        self.rowcount = 0
+        self._rowcount = 0
 
     def execute(self, query, args=()):
         DEBUG_OUTPUT('Cursor::execute()', query, args)
@@ -405,13 +405,13 @@ class Cursor(object):
         rowcount = 0
         for params in seq_of_params:
             self.execute(query, params)
-            rowcount += self.rowcount
-        self.rowcount = rowcount
+            rowcount += self._rowcount
+        self._rowcount = rowcount
 
     def fetchone(self):
         self._current_row += 1
-        DEBUG_OUTPUT('Cursor::fetchone()', self._current_row, self.rowcount)
-        if self._current_row >= self.rowcount:
+        DEBUG_OUTPUT('Cursor::fetchone()', self._current_row, self._rowcount)
+        if self._current_row >= self._rowcount:
             return None
         return self._rows[self._current_row]
 
@@ -426,6 +426,10 @@ class Cursor(object):
 
     def close(self):
         self.connection = None
+
+    @property
+    def rowcount(self):
+        return self._rowcount
 
     def __iter__(self):
         return self
@@ -497,12 +501,12 @@ class Connection(object):
                 command = data[:-1].decode('ascii')
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
                 if command == 'SHOW':
-                    obj.rowcount = 1
+                    obj._rowcount = 1
                     obj._current_row = -1
                 else:
                     for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
                         if command[:len(k)] == k:
-                            obj.rowcount = int(command.split(' ')[-1])
+                            obj._rowcount = int(command.split(' ')[-1])
                             obj._current_row = -1
                             break
             elif code == PG_B_ROW_DESCRIPTION:
