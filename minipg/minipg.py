@@ -386,6 +386,19 @@ class Cursor(object):
         self._rows = []
         self._current_row = -1
         self._rowcount = 0
+        self.arraysize = 1
+
+    def callproc(self, procname, args=()):
+        raise NotSupportedError()
+
+    def nextset(self, procname, args=()):
+        raise NotSupportedError()
+
+    def setinputsizes(sizes):
+        pass
+
+    def setoutputsize(size,column=None):
+        pass
 
     def execute(self, query, args=()):
         DEBUG_OUTPUT('Cursor::execute()', query, args)
@@ -697,5 +710,4 @@ class Connection(object):
 
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
-
 
