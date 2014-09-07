@@ -32,7 +32,7 @@ import decimal
 import datetime
 import time
 
-VERSION = (0, 2, 6)
+VERSION = (0, 2, 7)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
