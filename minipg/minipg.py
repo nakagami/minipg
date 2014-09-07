@@ -627,6 +627,9 @@ class Connection(object):
         return r
 
     def _write(self, b):
+        if sys.platform == 'cli':
+            # A workaround for IronPython 2.7.5b2 problem
+            b = str(b)
         if not self.sock:
             raise OperationalError(u"08003:Lost connection")
         n = 0
