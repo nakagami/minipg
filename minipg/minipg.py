@@ -623,7 +623,10 @@ class Connection(object):
             raise OperationalError(u"08003:Lost connection")
         r = b''
         while len(r) < ln:
-            r += self.sock.recv(ln-len(r))
+            b = self.sock.recv(ln-len(r))
+            if not b:
+                raise OperationalError(u"08003:Can't recv packets")
+            r += b
         return r
 
     def _write(self, b):
