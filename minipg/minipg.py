@@ -344,8 +344,6 @@ ROWID = DBAPITypeObject()
 
 class Error(Exception):
     def __init__(self, message):
-        if PY2 and isinstance(message, unicode):
-            message = message.encode('utf-8')
         self.message = message
     def __str__(self):
         return self.message
@@ -582,9 +580,11 @@ class Connection(object):
                 for b in err:
                     DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-                errcode = err[1][1:].decode(self.encoding)
-                message = errcode + u':' + err[2][1:].decode(self.encoding)
-                if errcode[:2] == u'23':
+                errcode = err[1][1:]
+                message = errcode + b':' + err[2][1:]
+                if not PY2:
+                    message = message.decode(self.encoding)
+                if errcode[:2] == b'23':
                     errobj = IntegrityError( message)
                 else:
                     errobj = DatabaseError(message)
