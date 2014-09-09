@@ -344,6 +344,8 @@ ROWID = DBAPITypeObject()
 
 class Error(Exception):
     def __init__(self, message):
+        if PY2 and isinstance(message, unicode):
+            message = message.encode('utf-8')
         self.message = message
     def __str__(self):
         return self.message
