@@ -33,7 +33,7 @@ import datetime
 import time
 import collections
 
-VERSION = (0, 2, 7)
+VERSION = (0, 2, 8)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
