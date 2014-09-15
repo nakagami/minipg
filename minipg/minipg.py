@@ -31,6 +31,7 @@ import socket
 import decimal
 import datetime
 import time
+import collections
 
 VERSION = (0, 2, 7)
 __version__ = '%s.%s.%s' % VERSION
@@ -383,8 +384,7 @@ class Cursor(object):
     def __init__(self, connection):
         self.connection = connection
         self.description = []
-        self._rows = []
-        self._current_row = -1
+        self._rows = collections.deque()
         self._rowcount = 0
         self.arraysize = 1
 
@@ -403,8 +403,7 @@ class Cursor(object):
     def execute(self, query, args=()):
         DEBUG_OUTPUT('Cursor::execute()', query, args)
         self.description = []
-        self._rows = []
-        self._current_row = -1
+        self._rows.clear()
         self.query = query
         self.args = args
         if args:
@@ -422,20 +421,21 @@ class Cursor(object):
         self._rowcount = rowcount
 
     def fetchone(self):
-        self._current_row += 1
-        DEBUG_OUTPUT('Cursor::fetchone()', self._current_row, self._rowcount)
-        if self._current_row >= self._rowcount:
-            return None
-        return self._rows[self._current_row]
+        DEBUG_OUTPUT('Cursor::fetchone()')
+        if len(self._rows):
+            return self._rows.popleft()
+        return None
 
     def fetchmany(self, size=1):
-        self._current_row += 1
-        r = self._rows[self._current_row:self._current_row+size]
-        self._current_row += size -1
+        r = []
+        for i in range(size):
+            r.append(r.fetchone())
         return r
 
     def fetchall(self):
-        return self._rows
+        r = list(self._rows)
+        self._rows.clear()
+        return r
 
     def close(self):
         self.connection = None
@@ -515,12 +515,10 @@ class Connection(object):
                 DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
                 if command == 'SHOW':
                     obj._rowcount = 1
-                    obj._current_row = -1
                 else:
                     for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
                         if command[:len(k)] == k:
                             obj._rowcount = int(command.split(' ')[-1])
-                            obj._current_row = -1
                             break
             elif code == PG_B_ROW_DESCRIPTION:
                 if not obj:
