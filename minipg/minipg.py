@@ -297,7 +297,7 @@ def escape_parameter(v):
     elif t == bytearray or t == bytes:        # binary
         return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
     elif t == bool:
-        return u"'t'" if v else u"'f'"
+        return u"TRUE" if v else u"FALSE"
     elif t == time.struct_time:
         return u'%04d-%02d-%02d %02d:%02d:%02d' % (
             v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
