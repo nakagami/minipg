@@ -38,7 +38,7 @@ setup(
     keywords=['PostgreSQL'],
     author = 'Hajime Nakagami',
     author_email = 'nakagami@gmail.com',
-    description = 'Yet another PostgreSQL database adapter',
+    description = 'Yet another PostgreSQL database driver',
     license = "MIT",
     packages = ['minipg'],
     cmdclass = cmdclass,
