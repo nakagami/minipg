@@ -471,6 +471,13 @@ class Connection(object):
         self.in_transaction = False
         self._open()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc, value, traceback):
+        self.close()
+
+
     def _send_message(self, code, data):
         # send code, data and PG_F_FLUSH
         self._write(b''.join([
@@ -614,12 +621,6 @@ class Connection(object):
         if errobj:
             raise errobj
         return
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc, value, traceback):
-        self.close()
 
     def _read(self, ln):
         if not self.sock:
