@@ -648,9 +648,10 @@ class Connection(object):
         self.sock.connect((self.host, self.port))
         DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
+            import ssl
             self._write(_bint_to_bytes(8, 4))
             self._write(_bint_to_bytes(80877103, 4))    # SSL request
-            if self_read(1) == b'S':
+            if self._read(1) == b'S':
                 self.sock = ssl.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
