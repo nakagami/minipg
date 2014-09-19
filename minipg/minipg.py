@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding:utf-8
 ##############################################################################
 #The MIT License (MIT)
 #
@@ -58,41 +56,41 @@ def HEX(data):
 # http://www.postgresql.org/docs/9.3/static/protocol.html
 
 # http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
-PG_B_AUTHENTICATION = b'R'
-PG_B_BACKEND_KEY_DATA = b'K'
-PG_F_BIND = b'B'
-PG_B_BIND_COMPLETE = b'2'
-PG_F_CLOSE = b'C'
-PG_B_CLOSE_COMPLETE = b'3'
-PG_B_COMMAND_COMPLETE = b'C'
-PG_COPY_DATA = b'd'
-PG_COPY_DONE = b'c'
-PG_F_COPY_FALL = b'f'
-PG_B_COPY_IN_RESPONSE = b'G'
-PG_B_COPY_OUT_RESPONSE = b'H'
-PG_B_COPY_BOTH_RESPONSE = b'W'
-PG_B_DATA_ROW = b'D'
-PG_F_DESCRIBE = b'D'
-PG_B_EMPTY_QUERY_RESPONSE = b'I'
-PG_B_ERROR_RESPONSE = b'E'
-PG_F_EXECUTE = b'E'
-PG_F_FLUSH = b'H'
-PG_F_FUNCTION_CALL = b'F'
-PG_B_FUNCTION_CALL_RESPONSE = b'V'
-PG_B_NO_DATA = b'n'
-PG_B_NOTICE_RESPONSE = b'N'
-PG_B_NOTIFICATION_RESPONSE = b'A'
-PG_B_PARAMETER_DESCRIPTION = b't'
-PG_B_PARAMETER_STATUS = b'S'
-PG_F_PARSE = b'P'
-PG_B_PARSE_COMPLETE = b'1'
-PG_F_PASSWORD_MESSAGE = b'p'
-PG_B_PORTAL_SUSPEND = b's'
-PG_F_QUERY = b'Q'
-PG_B_READY_FOR_QUERY = b'Z'
-PG_B_ROW_DESCRIPTION = b'T'
-PG_F_SYNC = b'S'
-PG_F_TERMINATE = b'X'
+PG_B_AUTHENTICATION = ord(b'R')
+PG_B_BACKEND_KEY_DATA = ord(b'K')
+PG_F_BIND = ord(b'B')
+PG_B_BIND_COMPLETE = ord(b'2')
+PG_F_CLOSE = ord(b'C')
+PG_B_CLOSE_COMPLETE = ord(b'3')
+PG_B_COMMAND_COMPLETE = ord(b'C')
+PG_COPY_DATA = ord(b'd')
+PG_COPY_DONE = ord(b'c')
+PG_F_COPY_FALL = ord(b'f')
+PG_B_COPY_IN_RESPONSE = ord(b'G')
+PG_B_COPY_OUT_RESPONSE = ord(b'H')
+PG_B_COPY_BOTH_RESPONSE = ord(b'W')
+PG_B_DATA_ROW = ord(b'D')
+PG_F_DESCRIBE = ord(b'D')
+PG_B_EMPTY_QUERY_RESPONSE = ord(b'I')
+PG_B_ERROR_RESPONSE = ord(b'E')
+PG_F_EXECUTE = ord(b'E')
+PG_F_FLUSH = ord(b'H')
+PG_F_FUNCTION_CALL = ord(b'F')
+PG_B_FUNCTION_CALL_RESPONSE = ord(b'V')
+PG_B_NO_DATA = ord(b'n')
+PG_B_NOTICE_RESPONSE = ord(b'N')
+PG_B_NOTIFICATION_RESPONSE = ord(b'A')
+PG_B_PARAMETER_DESCRIPTION = ord(b't')
+PG_B_PARAMETER_STATUS = ord(b'S')
+PG_F_PARSE = ord(b'P')
+PG_B_PARSE_COMPLETE = ord(b'1')
+PG_F_PASSWORD_MESSAGE = ord(b'p')
+PG_B_PORTAL_SUSPEND = ord(b's')
+PG_F_QUERY = ord(b'Q')
+PG_B_READY_FOR_QUERY = ord(b'Z')
+PG_B_ROW_DESCRIPTION = ord(b'T')
+PG_F_SYNC = ord(b'S')
+PG_F_TERMINATE = ord(b'X')
 
 # postgresql-9.3.5/src/include/catalog/pg_type.h
 PG_TYPE_BOOL = 16
@@ -474,14 +472,19 @@ class Connection(object):
         self._open()
 
     def _send_message(self, code, data):
-        self._write(
-            b''.join([code, _bint_to_bytes(len(data) + 4, 4), data, PG_F_FLUSH, b'\x00\x00\x00\x04'])
+        # send code, data and PG_F_FLUSH
+        self._write(b''.join([
+                chr(code) if PY2 else bytes([code]),
+                _bint_to_bytes(len(data) + 4, 4),
+                data,
+                b'H\x00\x00\x00\x04',
+            ])
         )
 
     def _process_messages(self, obj=None):
         errobj = None
         while True:
-            code = self._read(1)
+            code = ord(self._read(1))
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
@@ -601,9 +604,11 @@ class Connection(object):
                     buf = obj.read(8192)
                     if not buf:
                         break
-                    self._write(PG_COPY_DATA + _bint_to_bytes(len(buf) + 4, 4))
+                    # send PG_COPY_DATA
+                    self._write(b'd' + _bint_to_bytes(len(buf) + 4, 4))
                     self._write(buf)
-                self._write(PG_COPY_DONE + b'\x00\x00\x00\x04' + PG_F_SYNC + b'\x00\x00\x00\x04')
+                # send PG_COPY_DONE and PG_F_SYNC
+                self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
                 DEBUG_OUTPUT("SKIP:", code, ln, HEX(data))
         if errobj:
@@ -663,7 +668,6 @@ class Connection(object):
     def _is_connect(self):
         return bool(self.sock)
 
-
     def cursor(self):
         return Cursor(self)
 
@@ -708,7 +712,8 @@ class Connection(object):
     def close(self):
         DEBUG_OUTPUT('Connection::close()')
         if self.sock:
-            self._write(b''.join([PG_F_TERMINATE, b'\x00\x00\x00\x04']))
+            # send PG_F_TERMINATE
+            self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
 
