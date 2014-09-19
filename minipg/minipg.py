@@ -666,7 +666,7 @@ class Connection(object):
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
         self._process_messages()
 
-    def _is_connect(self):
+    def is_connect(self):
         return bool(self.sock)
 
     def cursor(self):
