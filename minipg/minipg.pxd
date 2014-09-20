@@ -120,7 +120,7 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
-@cython.locals(int r, int i)
+@cython.locals(long long r, int i)
 cdef long long _bytes_to_bint(bytes b)
 
 @cython.locals(int v)
