@@ -120,11 +120,15 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
-cdef int _bytes_to_bint(bytes b)
+cdef long long _bytes_to_bint(bytes b)
 cdef bytes _bint_to_bytes(int val, int nbytes)
 cpdef escape_parameter(v)
 
-cpdef class Connection:
+cdef class Connection:
+    cdef user, password, database, host, port, timeout, use_ssl, encoding
+    cdef sock
+    cdef autocommit, in_transaction
+
     cdef void _send_message(self, int code, bytes data)
 
     @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
