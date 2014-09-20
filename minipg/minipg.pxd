@@ -124,7 +124,7 @@ cdef int _bytes_to_bint(bytes b)
 cdef bytes _bint_to_bytes(int val, int nbytes)
 cpdef escape_parameter(v)
 
-class Connection:
+cpdef class Connection:
     cdef void _send_message(self, int code, bytes data)
 
     @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
