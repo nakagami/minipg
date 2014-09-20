@@ -119,4 +119,4 @@ cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
 cdef class Connection:
-    cpdef void _process_messages(self, obj)
+    cpdef _process_messages(self, obj)

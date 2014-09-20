@@ -488,7 +488,7 @@ class Connection(object):
             ])
         )
 
-    def _process_messages(self, obj=None):
+    def _process_messages(self, obj):
         errobj = None
         while True:
             code = ord(self._read(1))
@@ -665,7 +665,7 @@ class Connection(object):
         v += b'\x00'
 
         self._write(_bint_to_bytes(len(v) + 4, 4) + v)
-        self._process_messages()
+        self._process_messages(None)
 
     def is_connect(self):
         return bool(self.sock)
@@ -691,20 +691,20 @@ class Connection(object):
     def begin(self):
         DEBUG_OUTPUT('BEGIN')
         self._send_message(PG_F_QUERY, b"BEGIN\x00")
-        self._process_messages()
+        self._process_messages(None)
 
     def commit(self):
         DEBUG_OUTPUT('COMMIT')
         if self.sock:
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
-            self._process_messages()
+            self._process_messages(None)
             self.begin()
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-            self._process_messages()
+            self._process_messages(None)
             self.begin()
 
     def reopen(self):
