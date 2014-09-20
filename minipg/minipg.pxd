@@ -120,8 +120,12 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
+@cython.locals(int r, int i)
 cdef long long _bytes_to_bint(bytes b)
+
+@cython.locals(int v)
 cdef bytes _bint_to_bytes(int val, int nbytes)
+
 cpdef escape_parameter(v)
 
 cdef class Connection:
