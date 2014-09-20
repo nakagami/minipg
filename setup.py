@@ -2,6 +2,14 @@ import sys
 from distutils.core import setup, Command
 from distutils.extension import Extension
 
+try:
+    from Cython.Build import cythonize
+    ext_modules = cythonize([
+        Extension("minipg.minipg", ["minipg/minipg.py"]),
+    ])
+except ImportError:
+    ext_modules = None
+
 class TestCommand(Command):
     user_options = [ ]
 
@@ -42,4 +50,5 @@ setup(
     license = "MIT",
     packages = ['minipg'],
     cmdclass = cmdclass,
+    ext_modules = ext_modules,
 )
