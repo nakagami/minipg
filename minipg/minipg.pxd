@@ -119,4 +119,8 @@ cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
 cdef class Connection:
-    cpdef _process_messages(self, obj)
+    cdef void _send_message(self, int code, bytes data)
+    cdef void _process_messages(self, obj)
+    cdef bytes _read(self, int ln)
+    cdef _write(self, bytes b)
+    cdef _open(self)
