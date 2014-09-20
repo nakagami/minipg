@@ -120,11 +120,14 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
+cdef int _bytes_to_bint(bytes b)
+cdef bytes _bint_to_bytes(int val, int nbytes)
+cpdef escape_parameter(v)
 
 cdef class Connection:
     cdef void _send_message(self, int code, bytes data)
 
-    @cython.locals(n=cython.int, ln=cython.int)
+    @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
     cdef void _process_messages(self, obj)
 
     cdef bytes _read(self, int ln)

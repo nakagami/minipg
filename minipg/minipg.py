@@ -595,18 +595,14 @@ class Connection(object):
                 else:
                     errobj = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
-                is_binary = data[0] == '\x01'
-                num_columns = _bytes_to_bint(data[1:3])
-                DEBUG_OUTPUT("COPY_OUT_RESPONSE:", is_binary, num_columns)
+                DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
             elif code == PG_COPY_DATA:
                 DEBUG_OUTPUT("COPY_DATA")
                 obj.write(data)
             elif code == PG_COPY_DONE:
                 DEBUG_OUTPUT("COPY_DONE")
             elif code == PG_B_COPY_IN_RESPONSE:
-                is_binary = data[0] == '\x01'
-                num_columns = _bytes_to_bint(data[1:3])
-                DEBUG_OUTPUT("COPY_IN_RESPONSE", is_binary, num_columns)
+                DEBUG_OUTPUT("COPY_IN_RESPONSE")
                 while True:
                     buf = obj.read(8192)
                     if not buf:
