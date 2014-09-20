@@ -316,14 +316,8 @@ Date = datetime.date
 Time = datetime.time
 TimeDelta = datetime.timedelta
 Timestamp = datetime.datetime
-def DateFromTicks(ticks):
-    return apply(Date,time.localtime(ticks)[:3])
-def TimeFromTicks(ticks):
-    return apply(Time,time.localtime(ticks)[3:6])
-def TimestampFromTicks(ticks):
-    return apply(Timestamp,time.localtime(ticks)[:6])
 def Binary(b):
-    return bytes(b)
+    return bytearray(b)
 
 class DBAPITypeObject:
     def __init__(self,*values):
