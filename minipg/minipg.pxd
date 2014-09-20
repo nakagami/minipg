@@ -1,3 +1,5 @@
+import cython
+
 cdef int PG_B_AUTHENTICATION
 cdef int PG_B_BACKEND_KEY_DATA
 cdef int PG_F_BIND
@@ -118,9 +120,17 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
+
 cdef class Connection:
     cdef void _send_message(self, int code, bytes data)
+
+    @cython.locals(n=cython.int, ln=cython.int)
     cdef void _process_messages(self, obj)
+
     cdef bytes _read(self, int ln)
+
+    @cython.locals(n=cython.int)
     cdef _write(self, bytes b)
+
+    @cython.locals(v=bytes)
     cdef _open(self)
