@@ -85,11 +85,13 @@ class TestMiniPG(unittest.TestCase):
 
         cur.execute("select to_json(test_basic) from test_basic")
         self.assertEqual(len(cur.fetchall()), 3)
+
+        self.connection.commit()
         try:
             cur.execute("E")
         except minipg.DatabaseError as e:
             self.assertEqual(str(e), u'42601:syntax error at or near "E"')
-
+            self.connection.rollback()
         self.connection.execute("select * from test_basic")
 
     def test_trans(self):
