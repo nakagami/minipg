@@ -182,7 +182,7 @@ class TestMiniPG(unittest.TestCase):
         try:
             cur.execute("drop table test_copy")
         except:
-            pass
+            self.connection.rollback()
 
         cur.execute("""
             create table test_copy (
