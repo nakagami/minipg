@@ -688,14 +688,12 @@ class Connection(object):
         if self.sock:
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
             self._process_messages(None)
-            self.begin()
 
     def rollback(self):
         DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
             self._process_messages(None)
-            self.begin()
 
     def reopen(self):
         self.close()
