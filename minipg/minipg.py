@@ -264,7 +264,7 @@ def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     if PY2:
         return chr((val >> 24) & 0xff) + chr((val >> 16) & 0xff) + chr((val >> 8) & 0xff) + chr(val & 0xff)
     else:
-        return bytes((val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff)
+        return bytes([(val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff])
 
 def escape_parameter(v):
     t = type(v)
