@@ -490,11 +490,9 @@ class Connection(object):
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == PG_B_PARAMETER_STATUS:
                 k, v, _ = data.split(b'\x00')
-                k = k.decode('ascii')
-                v = v.decode('ascii')
                 if DEBUG: DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
-                if k == 'server_encoding':
-                    self.encoding = v
+                if k == b'server_encoding':
+                    self.encoding = v.decode('ascii')
             elif code == PG_B_BACKEND_KEY_DATA:
                 if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (HEX(data), ))
             elif code == PG_B_COMMAND_COMPLETE:
@@ -518,10 +516,10 @@ class Connection(object):
                     for i in range(count):
                         name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
-                        table_oid = _bytes_to_bint(data[n:n+4])
-                        table_pos = _bytes_to_bint(data[n+4:n+6])
-                        modifier = _bytes_to_bint(data[n+12:n+16]),     # modifier
-                        format = _bytes_to_bint(data[n+16:n+18]),       # format
+#                        table_oid = _bytes_to_bint(data[n:n+4])
+#                        table_pos = _bytes_to_bint(data[n+4:n+6])
+#                        modifier = _bytes_to_bint(data[n+12:n+16])
+#                        format = _bytes_to_bint(data[n+16:n+18]),
                         field = (
                             name,
                             _bytes_to_bint(data[n+6:n+10]),     # type oid
