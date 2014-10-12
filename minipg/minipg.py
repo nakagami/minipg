@@ -235,6 +235,9 @@ def _decode_column(data, oid, encoding):
         dt.replace(tzinfo=UTC())
         dt += datetime.timedelta(hours=offset)
         return dt
+    elif oid in (PG_TYPE_INTERVAL, ):
+        hours, minites, seconds = data.split(b':')
+        return datetime.timedelta(seconds=int(seconds), minutes=int(minites), hours=int(hours))
     elif oid in (PG_TYPE_BYTEA, ):
         assert data[:2] == u'\\x'
         hex_str = data[2:]
@@ -242,15 +245,14 @@ def _decode_column(data, oid, encoding):
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
     elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
-    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_UUID):
+    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_UUID, PG_TYPE_TSVECTOR):
         if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
-    elif oid > 0xffff:
-        return data
     else:
-        raise ValueError('Unknown oid=' + str(oid) + ":" + data)
+        if DEBUG:
+            raise ValueError('Unknown oid=' + str(oid) + ":" + data)
     return data
 
 # ----------------------------------------------------------------------------
