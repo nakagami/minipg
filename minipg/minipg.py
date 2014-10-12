@@ -236,12 +236,17 @@ def _decode_column(data, oid, encoding):
         dt += datetime.timedelta(hours=offset)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
-        days, t = data.split(b'days')
-        if days:
-            days = int(days)
-        else:
+        dt = data.split(b'days')
+        if len(dt) < 2:
             days = 0
-        hours, minites, seconds = t.split(b':')
+            hours, minites, seconds = dt[0].split(b':')
+        else:
+            days = int(dt[0])
+            if dt[1]:
+                hours, minites, seconds = dt[1].split(b':')
+            else:
+                hours = minites = seconds = 0
+
         hours = int(hours)
         minites = int(minites)
         seconds = int(seconds)
