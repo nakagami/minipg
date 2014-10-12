@@ -127,8 +127,7 @@ cdef int PG_TYPE_ANYRANGE
 cdef object _decode_column(data, int oid, str encoding)
 cdef long long _bytes_to_bint(bytes b)
 
-@cython.locals(v=cython.int, n=cython.int)
-cdef bytes _bint_to_bytes(int val, int nbytes)
+cdef bytes _bint_to_bytes(int val)
 
 cpdef escape_parameter(v)
 

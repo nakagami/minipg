@@ -264,20 +264,11 @@ def _bytes_to_bint(b):     # Read as big endian
         r = r * 256 + i
     return r
 
-def _bint_to_bytes(val, nbytes):    # Convert int value to big endian bytes.
-    v = abs(val)
-    b = []
-    for n in range(nbytes):
-        b.append((v >> (8*(nbytes - n - 1)) & 0xff))
-    if val < 0:
-        for i in range(nbytes):
-            b[i] = ~b[i] + 256
-        b[-1] += 1
-        for i in range(nbytes):
-            if b[nbytes -i -1] == 256:
-                b[nbytes -i -1] = 0
-                b[nbytes -i -2] += 1
-    return b''.join([chr(c) for c in b]) if PY2 else bytes(b)
+def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
+    if PY2:
+        return chr((val >> 24) & 0xff) + chr((val >> 16) & 0xff) + chr((val >> 8) & 0xff) + chr(val & 0xff)
+    else:
+        return bytes((val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff)
 
 def escape_parameter(v):
     t = type(v)
@@ -472,7 +463,7 @@ class Connection(object):
         # send code, data and PG_F_FLUSH
         self._write(b''.join([
                 chr(code) if PY2 else bytes([code]),
-                _bint_to_bytes(len(data) + 4, 4),
+                _bint_to_bytes(len(data) + 4),
                 data,
                 b'H\x00\x00\x00\x04',
             ])
@@ -598,7 +589,7 @@ class Connection(object):
                     if not buf:
                         break
                     # send PG_COPY_DATA
-                    self._write(b'd' + _bint_to_bytes(len(buf) + 4, 4))
+                    self._write(b'd' + _bint_to_bytes(len(buf) + 4))
                     self._write(buf)
                 # send PG_COPY_DONE and PG_F_SYNC
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
@@ -635,8 +626,8 @@ class Connection(object):
         if DEBUG: DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
             import ssl
-            self._write(_bint_to_bytes(8, 4))
-            self._write(_bint_to_bytes(80877103, 4))    # SSL request
+            self._write(_bint_to_bytes(8))
+            self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
                 self.sock = ssl.wrap_socket(self.sock)
             else:
@@ -644,13 +635,13 @@ class Connection(object):
         if self.timeout is not None:
             self.sock.settimeout(float(self.timeout))
         # protocol version 3.0
-        v = _bint_to_bytes(196608, 4)
+        v = _bint_to_bytes(196608)
         v += b'user\x00' + self.user.encode('ascii') + b'\x00'
         if self.database:
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
         v += b'\x00'
 
-        self._write(_bint_to_bytes(len(v) + 4, 4) + v)
+        self._write(_bint_to_bytes(len(v) + 4) + v)
         self._process_messages(None)
 
     def is_connect(self):
