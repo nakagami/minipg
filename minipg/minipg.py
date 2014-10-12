@@ -242,12 +242,12 @@ def _decode_column(data, oid, encoding):
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
     elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
-    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE):
+    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_UUID):
         if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
-    elif oid in (PG_TYPE_UUID,):
+    elif oid > 0xffff:
         return data
     else:
         raise ValueError('Unknown oid=' + str(oid) + ":" + data)
