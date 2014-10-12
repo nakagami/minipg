@@ -1,5 +1,9 @@
 import cython
 
+cdef int PY2
+cdef int DEBUG
+cdef void DEBUG_OUTPUT(str s)
+
 cdef int PG_B_AUTHENTICATION
 cdef int PG_B_BACKEND_KEY_DATA
 cdef int PG_F_BIND
@@ -120,6 +124,7 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
+cdef object _decode_column(data, int oid, str encoding)
 cdef long long _bytes_to_bint(bytes b)
 
 @cython.locals(v=cython.int, n=cython.int)
@@ -130,17 +135,25 @@ cpdef escape_parameter(v)
 cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, encoding
     cdef sock
-    cdef autocommit, in_transaction
+    cdef int autocommit, in_transaction
 
-    cdef void _send_message(self, int code, bytes data)
+    cdef void _send_message(Connection self, int code, bytes data)
 
     @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
-    cdef void _process_messages(self, obj) except *
+    cdef void _process_messages(Connection self, object obj) except *
 
-    cdef bytes _read(self, int ln)
+    cdef bytes _read(Connection self, int ln)
 
     @cython.locals(n=cython.int)
-    cdef _write(self, bytes b)
+    cdef _write(Connection self, bytes b)
 
     @cython.locals(v=bytes)
-    cdef _open(self)
+    cdef _open(Connection self)
+
+    cpdef begin(Connection self)
+    cpdef commit(Connection self)
+    cpdef rollback(Connection self)
+
+    cpdef reopen(Connection self)
+
+    cpdef close(Connection self)

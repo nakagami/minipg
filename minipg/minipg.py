@@ -41,12 +41,8 @@ PY2 = sys.version_info[0] == 2
 
 DEBUG = False
 
-def DEBUG_OUTPUT(*argv):
-    if not DEBUG:
-        return
-    for s in argv:
-        print(s, end=' ', file=sys.stderr)
-    print(file=sys.stderr)
+def DEBUG_OUTPUT(s):
+    print(s, end=' \n', file=sys.stderr)
 
 def HEX(data):
     import binascii
@@ -247,7 +243,7 @@ def _decode_column(data, oid, encoding):
     elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
     elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE):
-        DEBUG_OUTPUT('NO DECODE type:', oid)
+        if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     else:
         if DEBUG:
@@ -395,7 +391,7 @@ class Cursor(object):
         pass
 
     def execute(self, query, args=()):
-        DEBUG_OUTPUT('Cursor::execute()', query, args)
+        if DEBUG: DEBUG_OUTPUT('Cursor::execute()\t%s\t%s' % (query, args))
         self.description = []
         self._rows.clear()
         self.query = query
@@ -407,7 +403,7 @@ class Cursor(object):
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
-        DEBUG_OUTPUT('Cursor::executemany()', query, seq_of_params)
+        if DEBUG: DEBUG_OUTPUT('Cursor::executemany()\t%s\t%s' % (query, seq_of_params))
         rowcount = 0
         for params in seq_of_params:
             self.execute(query, params)
@@ -415,7 +411,7 @@ class Cursor(object):
         self._rowcount = rowcount
 
     def fetchone(self):
-        DEBUG_OUTPUT('Cursor::fetchone()')
+        if DEBUG: DEBUG_OUTPUT('Cursor::fetchone()')
         if len(self._rows):
             return self._rows.popleft()
         return None
@@ -452,7 +448,7 @@ class Cursor(object):
 
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
-        DEBUG_OUTPUT("Connection::__init__()")
+        if DEBUG: DEBUG_OUTPUT("Connection::__init__()")
         self.user = user
         self.password = password
         self.database = database
@@ -489,12 +485,12 @@ class Connection(object):
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
-                DEBUG_OUTPUT("READY_FOR_QUERY:", data)
+                if DEBUG: DEBUG_OUTPUT("READY_FOR_QUERY:%s" % (data, ))
                 self.in_transaction = (data == b'T')
                 break
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
-                DEBUG_OUTPUT("AUTHENTICATION:auth_method=", auth_method)
+                if DEBUG: DEBUG_OUTPUT("AUTHENTICATION:auth_method=%d" % (auth_method,))
                 if auth_method == 0:      # trust
                     pass
                 elif auth_method == 5:    # md5
@@ -509,15 +505,15 @@ class Connection(object):
                 k, v, _ = data.split(b'\x00')
                 k = k.decode('ascii')
                 v = v.decode('ascii')
-                DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
+                if DEBUG: DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
                 if k == 'server_encoding':
                     self.encoding = v
             elif code == PG_B_BACKEND_KEY_DATA:
-                DEBUG_OUTPUT("BACKEND_KEY_DATA:", HEX(data))
+                if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (HEX(data), ))
             elif code == PG_B_COMMAND_COMPLETE:
                 if obj:
                     command = data[:-1].decode('ascii')
-                    DEBUG_OUTPUT("COMMAND_COMPLETE:", command)
+                    if DEBUG: DEBUG_OUTPUT("COMMAND_COMPLETE:%s" % (command, ))
                     if command == 'SHOW':
                         obj._rowcount = 1
                     else:
@@ -527,7 +523,7 @@ class Connection(object):
                                 break
             elif code == PG_B_ROW_DESCRIPTION:
                 if obj:
-                    DEBUG_OUTPUT("ROW_DESCRIPTION:", HEX(data))
+                    if DEBUG: DEBUG_OUTPUT("ROW_DESCRIPTION:%s" % (HEX(data), ))
                     count = _bytes_to_bint(data[0:2])
                     obj.description = [None] * count
                     n = 2
@@ -551,10 +547,10 @@ class Connection(object):
                         n += 18
                         obj.description[idx] = field
                         idx += 1
-                    DEBUG_OUTPUT('\t\t', obj.description)
+                    if DEBUG: DEBUG_OUTPUT('\t\t%s' % (obj.description))
             elif code == PG_B_DATA_ROW:
                 if obj:
-                    DEBUG_OUTPUT("DATA_ROW:", HEX(data))
+                    if DEBUG: DEBUG_OUTPUT("DATA_ROW:%s" % (HEX(data), ))
                     n = 2
                     row = []
                     while n < len(data):
@@ -569,16 +565,16 @@ class Connection(object):
                     for i in range(len(row)):
                         row[i] = _decode_column(row[i], obj.description[i][1], self.encoding)
                     obj._rows.append(tuple(row))
-                    DEBUG_OUTPUT("\t\t", row)
+                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
             elif code == PG_B_NOTICE_RESPONSE:
-                DEBUG_OUTPUT("NOTICE_RESPONSE:", HEX(data))
+                if DEBUG: DEBUG_OUTPUT("NOTICE_RESPONSE:%s" % (HEX(data), ))
                 for s in data.split(b'\x00'):
-                    DEBUG_OUTPUT("\t\t", s.decode(self.encoding))
+                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (s.decode(self.encoding)))
             elif code == PG_B_ERROR_RESPONSE:
-                DEBUG_OUTPUT("ERROR_RESPONSE:", HEX(data))
+                if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (HEX(data), ))
                 err = data.split(b'\x00')
                 for b in err:
-                    DEBUG_OUTPUT("\t\t", b.decode(self.encoding))
+                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[1][1:]
                 message = errcode + b':' + err[2][1:]
@@ -589,14 +585,14 @@ class Connection(object):
                 else:
                     errobj = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
-                DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
+                if DEBUG: DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
             elif code == PG_COPY_DATA:
-                DEBUG_OUTPUT("COPY_DATA")
+                if DEBUG: DEBUG_OUTPUT("COPY_DATA")
                 obj.write(data)
             elif code == PG_COPY_DONE:
-                DEBUG_OUTPUT("COPY_DONE")
+                if DEBUG: DEBUG_OUTPUT("COPY_DONE")
             elif code == PG_B_COPY_IN_RESPONSE:
-                DEBUG_OUTPUT("COPY_IN_RESPONSE")
+                if DEBUG: DEBUG_OUTPUT("COPY_IN_RESPONSE")
                 while True:
                     buf = obj.read(8192)
                     if not buf:
@@ -607,7 +603,7 @@ class Connection(object):
                 # send PG_COPY_DONE and PG_F_SYNC
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
-                DEBUG_OUTPUT("SKIP:", code, ln, HEX(data))
+                if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, HEX(data)))
         if errobj:
             raise errobj
         return
@@ -636,7 +632,7 @@ class Connection(object):
     def _open(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
-        DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
+        if DEBUG: DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
             import ssl
             self._write(_bint_to_bytes(8, 4))
@@ -666,7 +662,7 @@ class Connection(object):
     def execute(self, query, obj=None):
         if not self.in_transaction:
             self.begin()
-        DEBUG_OUTPUT('Connection::execute()', query)
+        if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
@@ -679,18 +675,18 @@ class Connection(object):
         self.autocommit = autocommit
 
     def begin(self):
-        DEBUG_OUTPUT('BEGIN')
+        if DEBUG: DEBUG_OUTPUT('BEGIN')
         self._send_message(PG_F_QUERY, b"BEGIN\x00")
         self._process_messages(None)
 
     def commit(self):
-        DEBUG_OUTPUT('COMMIT')
+        if DEBUG: DEBUG_OUTPUT('COMMIT')
         if self.sock:
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
             self._process_messages(None)
 
     def rollback(self):
-        DEBUG_OUTPUT('ROLLBACK')
+        if DEBUG: DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
             self._process_messages(None)
@@ -700,7 +696,7 @@ class Connection(object):
         self._open()
 
     def close(self):
-        DEBUG_OUTPUT('Connection::close()')
+        if DEBUG: DEBUG_OUTPUT('Connection::close()')
         if self.sock:
             # send PG_F_TERMINATE
             self._write(b'X\x00\x00\x00\x04')
