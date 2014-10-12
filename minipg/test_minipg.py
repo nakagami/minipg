@@ -70,6 +70,9 @@ class TestMiniPG(unittest.TestCase):
         """)
         cur.execute("select * from test_basic")
         self.assertEqual(len(cur.fetchall()), 3)
+        cur.execute("select * from test_basic")
+        self.assertEqual(len(cur.fetchmany(size=2)), 2)
+
         cur.execute("select count(*) from test_basic where i8 is NULL")
         self.assertEqual(cur.fetchone()[0], 1)
         cur.execute("select i4 from test_basic where i2=%s", (1,))

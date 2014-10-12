@@ -404,10 +404,13 @@ class Cursor(object):
         return None
 
     def fetchmany(self, size=1):
-        r = []
+        rs = []
         for i in range(size):
-            r.append(r.fetchone())
-        return r
+            r = self.fetchone()
+            if not r:
+                break
+            rs.append(r)
+        return rs
 
     def fetchall(self):
         r = list(self._rows)
