@@ -490,11 +490,9 @@ class Connection(object):
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == PG_B_PARAMETER_STATUS:
                 k, v, _ = data.split(b'\x00')
-                k = k.decode('ascii')
-                v = v.decode('ascii')
                 if DEBUG: DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
-                if k == 'server_encoding':
-                    self.encoding = v
+                if k == b'server_encoding':
+                    self.encoding = v if PY2 else v.decode('ascii')
             elif code == PG_B_BACKEND_KEY_DATA:
                 if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (HEX(data), ))
             elif code == PG_B_COMMAND_COMPLETE:
