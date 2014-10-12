@@ -246,10 +246,7 @@ def _decode_column(data, oid, encoding):
         if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     else:
-        if DEBUG:
-            raise ValueError(str(oid) + u":" + data)
-
-    # other types return as string
+        raise ValueError('Unknown oid=' + str(oid) + ":" + data)
     return data
 
 # ----------------------------------------------------------------------------
