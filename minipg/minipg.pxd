@@ -124,7 +124,7 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
-cdef object _decode_column(data, int oid, str encoding)
+cdef object _decode_column(data, int oid, encoding)
 
 @cython.locals(r=cython.longlong)
 cdef long long _bytes_to_bint(bytes b)
