@@ -236,8 +236,16 @@ def _decode_column(data, oid, encoding):
         dt += datetime.timedelta(hours=offset)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
-        hours, minites, seconds = data.split(b':')
-        return datetime.timedelta(seconds=int(seconds), minutes=int(minites), hours=int(hours))
+        days, t = data.split(b'days')
+        if days:
+            days = int(days)
+        else:
+            days = 0
+        hours, minites, seconds = t.split(b':')
+        hours = int(hours)
+        minites = int(minites)
+        seconds = int(seconds)
+        return datetime.timedelta(seconds=seconds, minutes=minites, hours=hours, days=days)
     elif oid in (PG_TYPE_BYTEA, ):
         assert data[:2] == u'\\x'
         hex_str = data[2:]
