@@ -255,14 +255,9 @@ def _decode_column(data, oid, encoding):
 # ----------------------------------------------------------------------------
 
 def _bytes_to_bint(b):     # Read as big endian
-    if PY2:
-        r = ord(b[0])
-        for n in b[1:]:
-            r += ord(n)
-    else:
-        r = b[0]
-        for n in b[1:]:
-            r = r * 256 + n
+    r = 0
+    for n in b:
+        r = r * 256 + (ord(n) if PY2 else n)
     return r
 
 def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
