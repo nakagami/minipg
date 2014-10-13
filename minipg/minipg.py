@@ -263,6 +263,8 @@ def _decode_column(data, oid, encoding):
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
+    elif oid in (PG_TYPE_FLOAT4ARRAY, ):
+        return [float(f) for f in data[1:-1].split(',')]
     else:
         if DEBUG:
             raise ValueError('Unknown oid=' + str(oid) + ":" + data)
