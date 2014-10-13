@@ -337,7 +337,7 @@ TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
 
 class Error(Exception):
-    def __init__(self, message):
+    def __init__(self, message=u'Database Error'):
         self.message = message
     def __str__(self):
         return self.message
