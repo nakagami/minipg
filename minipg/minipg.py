@@ -309,6 +309,8 @@ def escape_parameter(v):
         return str(v)
     elif t == decimal.Decimal:
         return "'" + str(v) + "'"
+    elif t == list or t == tuple:
+        return u'{' + u','.join([escape_parameter(e) for e in v]) + u'}'
     else:
         return "'" + str(v) + "'"
 
