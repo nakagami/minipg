@@ -423,6 +423,8 @@ class Cursor(object):
 
     def fetchone(self):
         if DEBUG: DEBUG_OUTPUT('Cursor::fetchone()')
+        if not self.connection or not self.connection.is_connect():
+            raise OperationalError(u"08003:Lost connection")
         if len(self._rows):
             return self._rows.popleft()
         return None
