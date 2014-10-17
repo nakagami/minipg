@@ -418,6 +418,8 @@ class Cursor(object):
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query.replace('%', '%%').replace('%%s', '%s')
             query = query % escaped_args
+        if not self.connection.in_transaction:
+            self.connection.begin()
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
@@ -681,8 +683,6 @@ class Connection(object):
         return Cursor(self)
 
     def execute(self, query, obj=None):
-        if not self.in_transaction:
-            self.begin()
         if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
         self._send_message(
             PG_F_QUERY,
