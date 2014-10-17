@@ -284,8 +284,16 @@ def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     else:
         return bytes([(val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff])
 
+_escape_hook = {}
+
+def add_escape_hook(t, func):
+    _escape_hook[t] = func
+
 def escape_parameter(v):
     t = type(v)
+    func = _escape_hook.get(t)
+    if func:
+        return func(v)
     if v is None:
         return 'NULL'
     elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
@@ -313,7 +321,6 @@ def escape_parameter(v):
         return u'{' + u','.join([escape_parameter(e) for e in v]) + u'}'
     else:
         return "'" + str(v) + "'"
-
 
 Date = datetime.date
 Time = datetime.time
