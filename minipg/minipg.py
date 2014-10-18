@@ -687,7 +687,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def _execute(self, query, obj):
+    def _execute(self, query, obj=None):
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
