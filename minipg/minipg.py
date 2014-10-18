@@ -425,8 +425,6 @@ class Cursor(object):
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query.replace('%', '%%').replace('%%s', '%s')
             query = query % escaped_args
-        if not self.connection.in_transaction:
-            self.connection.begin()
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
@@ -689,8 +687,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def execute(self, query, obj=None):
-        if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
+    def _execute(self, query, obj):
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
@@ -698,6 +695,12 @@ class Connection(object):
         self._process_messages(obj)
         if self.autocommit:
             self.commit()
+
+    def execute(self, query, obj=None):
+        if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
+        if not self.in_transaction:
+            self.begin()
+        self._execute(query, obj)
 
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
