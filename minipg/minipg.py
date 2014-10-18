@@ -124,6 +124,7 @@ PG_TYPE_CASH = 790
 PG_TYPE_MACADDR = 829
 PG_TYPE_INET = 869
 PG_TYPE_CIDR = 650
+PG_TYPE_NAMEARRAY = 1003
 PG_TYPE_INT2ARRAY = 1005
 PG_TYPE_INT4ARRAY = 1007
 PG_TYPE_TEXTARRAY = 1009
@@ -263,6 +264,8 @@ def _decode_column(data, oid, encoding):
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
+    elif oid in (PG_TYPE_NAMEARRAY, PG_TYPE_TEXTARRAY):
+        return [s for s in data[1:-1].split(',')]
     elif oid in (PG_TYPE_FLOAT4ARRAY, ):
         return [float(f) for f in data[1:-1].split(',')]
     elif oid in (PG_TYPE_INT2VECTOR, ):
@@ -412,6 +415,8 @@ class Cursor(object):
 
     def execute(self, query, args=()):
         if DEBUG: DEBUG_OUTPUT('Cursor::execute()\t%s\t%s' % (query, args))
+        if not self.connection or not self.connection.is_connect():
+            raise OperationalError(u"08003:Lost connection")
         self.description = []
         self._rows.clear()
         self.query = query
