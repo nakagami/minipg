@@ -427,6 +427,7 @@ class Cursor(object):
             escaped_args = tuple(escape_parameter(arg) for arg in args)
             query = query.replace('%', '%%').replace('%%s', '%s')
             query = query % escaped_args
+            query = query.replace('%%', '%')
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
