@@ -231,7 +231,6 @@ def _decode_column(data, oid, encoding):
         if n == -1:
             n = data.rfind('-')
         s = data[:n]
-        offset = int(data[n:])
         if len(s) == 19:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
