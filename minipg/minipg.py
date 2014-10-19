@@ -466,6 +466,10 @@ class Cursor(object):
     def rowcount(self):
         return self._rowcount
 
+    @property
+    def closed(self):
+        return self.connection is None or not self.connection.is_connect()
+
     def __iter__(self):
         return self
 
