@@ -178,7 +178,16 @@ def _decode_column(data, oid, encoding):
     class TZ(datetime.tzinfo):
         def __init__(self, offset):
             self.offset = offset
-            self.delta = datetime.timedelta(hours=int(self.offset))
+            hours = int(self.offset[:3])
+            if len(offset) > 3:
+                minutes = int(self.offset[4:6])
+            else:
+                minutes = 0
+            if len(offset) > 6:
+                seconds = int(self.offset[7:])
+            else:
+                seconds = 0
+            self.delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
         def utcoffset(self, dt):
             return self.delta
