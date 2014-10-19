@@ -316,8 +316,8 @@ def escape_parameter(v):
         return u'%04d-%02d-%02d %02d:%02d:%02d' % (
             v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
     elif t == datetime.datetime:
-        return u"'%04d-%02d-%02d %02d:%02d:%02d'" % (
-            v.year, v.month, v.day, v.hour, v.minute, v.second)
+        return u"'%04d-%02d-%02d %02d:%02d:%02d.%06d'" % (
+            v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond)
     elif t == datetime.date:
         return "'" + str(v) + "'"
     elif t == datetime.timedelta:
