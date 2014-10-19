@@ -418,7 +418,7 @@ class Cursor(object):
     def execute(self, query, args=()):
         if DEBUG: DEBUG_OUTPUT('Cursor::execute()\t%s\t%s' % (query, args))
         if not self.connection or not self.connection.is_connect():
-            raise OperationalError(u"08003:Lost connection")
+            raise ProgrammingError(u"08003:Lost connection")
         self.description = []
         self._rows.clear()
         self.query = query
