@@ -178,7 +178,7 @@ def _decode_column(data, oid, encoding):
     class TZ(datetime.tzinfo):
         def __init__(self, offset):
             self.offset = offset
-            self.delta = datetime.timedelta(hours=self.offset)
+            self.delta = datetime.timedelta(hours=int(self.offset))
 
         def utcoffset(self, dt):
             return self.delta
@@ -187,10 +187,7 @@ def _decode_column(data, oid, encoding):
             return self.delta
 
         def tzname(self, dt):
-            if offset > 0:
-                return "UTC+" + str(offset)
-            else:
-                return "UTC" + str(offset)
+            return u"UTC" + self.offset
 
     if data is None:
         return data
@@ -227,7 +224,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        dt.replace(tzinfo=TZ(n))
+        dt.replace(tzinfo=TZ(data[n:]))
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
         n = data.rfind('+')
@@ -239,7 +236,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        dt.replace(tzinfo=TZ(n))
+        dt.replace(tzinfo=TZ(data[n:]))
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         dt = data.split('days')
