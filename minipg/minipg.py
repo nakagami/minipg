@@ -402,6 +402,7 @@ class Cursor(object):
         self._rows = collections.deque()
         self._rowcount = 0
         self.arraysize = 1
+        self.query = u''
 
     def callproc(self, procname, args=()):
         raise NotSupportedError()
