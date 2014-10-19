@@ -175,15 +175,22 @@ PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
 def _decode_column(data, oid, encoding):
-    class UTC(datetime.tzinfo):
+    class TZ(datetime.tzinfo):
+        def __init__(self, offset):
+            self.offset = offset
+            self.delta = datetime.timedelta(hours=self.offset)
+
         def utcoffset(self, dt):
-            return datetime.timedelta(0)
+            return self.delta
 
         def dst(self, dt):
-            return datetime.timedelta(0)
+            return self.delta
 
         def tzname(self, dt):
-            return "UTC"
+            if offset > 0:
+                return "UTC+" + str(offset)
+            else:
+                return "UTC" + str(offset)
 
     if data is None:
         return data
@@ -220,8 +227,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        dt.replace(tzinfo=UTC())
-        dt += datetime.timedelta(hours=offset)
+        dt.replace(tzinfo=TZ(n))
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
         n = data.rfind('+')
@@ -233,8 +239,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        dt.replace(tzinfo=UTC())
-        dt += datetime.timedelta(hours=offset)
+        dt.replace(tzinfo=TZ(n))
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         dt = data.split('days')
