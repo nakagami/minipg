@@ -174,7 +174,7 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _decode_column(data, oid, connection):
+def _decode_column(data, oid, encoding, tzinfo):
     class TZ(datetime.tzinfo):
         def __init__(self, offset):
             self.offset = offset
@@ -200,7 +200,7 @@ def _decode_column(data, oid, connection):
 
     if data is None:
         return data
-    data = data.decode(connection.encoding)
+    data = data.decode(encoding)
     if oid in (PG_TYPE_BOOL,):
         return data == 't'
     elif oid in (PG_TYPE_INT2, PG_TYPE_INT4, PG_TYPE_INT8, PG_TYPE_OID,):
@@ -218,16 +218,16 @@ def _decode_column(data, oid, connection):
         else:
             dt = datetime.datetime.strptime(data, '%H:%M:%S.%f')
         dt = datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
-        if connection.tzinfo:
-            dt = dt.replace(tzinfo=connection.tzinfo)
+        if tzinfo:
+            dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_TIMESTAMP, ):
         if len(data) == 19:
             dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
-        if connection.tzinfo:
-            dt = dt.replace(tzinfo=connection.tzinfo)
+        if tzinfo:
+            dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_TIMETZ, ):
         n = data.rfind('+')
@@ -618,7 +618,7 @@ class Connection(object):
                             row.append(data[n:n+ln])
                             n += ln
                     for i in range(len(row)):
-                        row[i] = _decode_column(row[i], obj.description[i][1], self)
+                        row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                     obj._rows.append(tuple(row))
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
             elif code == PG_B_NOTICE_RESPONSE:
