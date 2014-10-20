@@ -244,8 +244,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        dt.replace(tzinfo=TZ(data[n:]))
-        return dt
+        return dt.replace(tzinfo=TZ(data[n:]))
     elif oid in (PG_TYPE_INTERVAL, ):
         dt = data.split('days')
         if len(dt) < 2:
