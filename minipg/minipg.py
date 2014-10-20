@@ -211,7 +211,7 @@ def _decode_column(data, oid, connection):
         return decimal.Decimal(data)
     elif oid in (PG_TYPE_DATE, ):
         dt = datetime.datetime.strptime(data, '%Y-%m-%d')
-        dt = datetime.date(dt.year, dt.month, dt.day)
+        return datetime.date(dt.year, dt.month, dt.day)
     elif oid in (PG_TYPE_TIME, ):
         if len(data) == 8:
             dt = datetime.datetime.strptime(data, '%H:%M:%S')
