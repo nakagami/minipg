@@ -233,7 +233,7 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        dt.replace(tzinfo=TZ(data[n:]))
+        dt = dt.replace(tzinfo=TZ(data[n:]))
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
         n = data.rfind('+')
@@ -244,7 +244,8 @@ def _decode_column(data, oid, encoding):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        return dt.replace(tzinfo=TZ(data[n:]))
+        dt = dt.replace(tzinfo=TZ(data[n:]))
+        return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         dt = data.split('days')
         if len(dt) < 2:
