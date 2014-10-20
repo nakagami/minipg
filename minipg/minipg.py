@@ -174,7 +174,7 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _decode_column(data, oid, encoding):
+def _decode_column(data, oid, connection):
     class TZ(datetime.tzinfo):
         def __init__(self, offset):
             self.offset = offset
@@ -200,7 +200,7 @@ def _decode_column(data, oid, encoding):
 
     if data is None:
         return data
-    data = data.decode(encoding)
+    data = data.decode(connection.encoding)
     if oid in (PG_TYPE_BOOL,):
         return data == 't'
     elif oid in (PG_TYPE_INT2, PG_TYPE_INT4, PG_TYPE_INT8, PG_TYPE_OID,):
@@ -211,18 +211,24 @@ def _decode_column(data, oid, encoding):
         return decimal.Decimal(data)
     elif oid in (PG_TYPE_DATE, ):
         dt = datetime.datetime.strptime(data, '%Y-%m-%d')
-        return datetime.date(dt.year, dt.month, dt.day)
+        dt = datetime.date(dt.year, dt.month, dt.day)
     elif oid in (PG_TYPE_TIME, ):
         if len(data) == 8:
             dt = datetime.datetime.strptime(data, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(data, '%H:%M:%S.%f')
-        return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
+        dt = datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
+        if connection.tzinfo:
+            dt = dt.replace(tzinfo=connection.tzinfo)
+        return dt
     elif oid in (PG_TYPE_TIMESTAMP, ):
         if len(data) == 19:
-            return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
+            dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
         else:
-            return datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
+            dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
+        if connection.tzinfo:
+            dt = dt.replace(tzinfo=connection.tzinfo)
+        return dt
     elif oid in (PG_TYPE_TIMETZ, ):
         n = data.rfind('+')
         if n == -1:
@@ -497,13 +503,14 @@ class Cursor(object):
         return self.__next__()
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, tzinfo, timeout, use_ssl):
         if DEBUG: DEBUG_OUTPUT("Connection::__init__()")
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
+        self.tzinfo = tzinfo
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
@@ -611,7 +618,7 @@ class Connection(object):
                             row.append(data[n:n+ln])
                             n += ln
                     for i in range(len(row)):
-                        row[i] = _decode_column(row[i], obj.description[i][1], self.encoding)
+                        row[i] = _decode_column(row[i], obj.description[i][1], self)
                     obj._rows.append(tuple(row))
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
             elif code == PG_B_NOTICE_RESPONSE:
@@ -754,6 +761,6 @@ class Connection(object):
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=5432, tzinfo=None, timeout=None, use_ssl=False):
+    return Connection(user, password, database, host, port, tzinfo, timeout, use_ssl)
 

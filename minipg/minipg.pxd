@@ -137,6 +137,7 @@ cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, encoding
     cdef object sock
     cdef int autocommit, in_transaction
+    cdef object tzinfo
 
     cdef void _send_message(Connection self, int code, bytes data)
 
