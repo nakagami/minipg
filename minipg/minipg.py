@@ -630,18 +630,19 @@ class Connection(object):
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (s.decode(self.encoding)))
             elif code == PG_B_ERROR_RESPONSE:
                 if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (HEX(data), ))
-                err = data.split(b'\x00')
-                for b in err:
-                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
-                # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-                errcode = err[1][1:]
-                message = errcode + b':' + err[2][1:]
-                if not PY2:
-                    message = message.decode(self.encoding)
-                if errcode[:2] == b'23':
-                    errobj = IntegrityError( message)
-                else:
-                    errobj = DatabaseError(message)
+                if not errobj:
+                    err = data.split(b'\x00')
+                    for b in err:
+                        if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
+                    # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
+                    errcode = err[1][1:]
+                    message = errcode + b':' + err[2][1:]
+                    if not PY2:
+                        message = message.decode(self.encoding)
+                    if errcode[:2] == b'23':
+                        errobj = IntegrityError( message)
+                    else:
+                        errobj = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 if DEBUG: DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
             elif code == PG_COPY_DATA:
