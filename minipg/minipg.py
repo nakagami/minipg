@@ -174,7 +174,7 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-def _decode_column(data, oid, encoding, tzinfo):
+def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
     class TZ(datetime.tzinfo):
         def __init__(self, offset):
             self.offset = offset
@@ -239,7 +239,7 @@ def _decode_column(data, oid, encoding, tzinfo):
             dt = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        if tzinfo:
+        if use_tzinfo:
             dt = dt.replace(tzinfo=TZ(data[n:]))
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
@@ -251,7 +251,7 @@ def _decode_column(data, oid, encoding, tzinfo):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        if tzinfo:
+        if use_tzinfo:
             dt = dt.replace(tzinfo=TZ(data[n:]))
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
@@ -518,6 +518,7 @@ class Connection(object):
         self.encoding = 'UTF8'
         self.autocommit = False
         self.in_transaction = False
+        self.use_tzinfo = True
         self._open()
 
     def __enter__(self):
@@ -620,7 +621,7 @@ class Connection(object):
                             row.append(data[n:n+ln])
                             n += ln
                     for i in range(len(row)):
-                        row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
+                        row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo, self.use_tzinfo)
                     obj._rows.append(tuple(row))
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
             elif code == PG_B_NOTICE_RESPONSE:
