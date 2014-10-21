@@ -174,30 +174,30 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
+class TZ(datetime.tzinfo):
+    def __init__(self, offset):
+        self.offset = offset
+        hours = int(self.offset[:3])
+        if len(offset) > 3:
+            minutes = int(self.offset[4:6])
+        else:
+            minutes = 0
+        if len(offset) > 6:
+            seconds = int(self.offset[7:])
+        else:
+            seconds = 0
+        self.delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+    def utcoffset(self, dt):
+        return self.delta
+
+    def dst(self, dt):
+        return self.delta
+
+    def tzname(self, dt):
+        return u"UTC" + self.offset
+
 def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
-    class TZ(datetime.tzinfo):
-        def __init__(self, offset):
-            self.offset = offset
-            hours = int(self.offset[:3])
-            if len(offset) > 3:
-                minutes = int(self.offset[4:6])
-            else:
-                minutes = 0
-            if len(offset) > 6:
-                seconds = int(self.offset[7:])
-            else:
-                seconds = 0
-            self.delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
-
-        def utcoffset(self, dt):
-            return self.delta
-
-        def dst(self, dt):
-            return self.delta
-
-        def tzname(self, dt):
-            return u"UTC" + self.offset
-
     if data is None:
         return data
     data = data.decode(encoding)
