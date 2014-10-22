@@ -726,7 +726,6 @@ class Connection(object):
         )
         err = self._process_messages(obj)
         if err:
-            self._rollback()
             raise err
         if self.autocommit:
             self.commit()
