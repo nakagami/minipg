@@ -492,6 +492,7 @@ class Cursor(object):
     def closed(self):
         return self.connection is None or not self.connection.is_connect()
 
+
     def __iter__(self):
         return self
 
@@ -517,7 +518,7 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.in_transaction = False
+        self._ready_for_query = b'I'
         self.use_tzinfo = True
         self._open()
 
@@ -546,7 +547,7 @@ class Connection(object):
             data = self._read(ln)
             if code == PG_B_READY_FOR_QUERY:
                 if DEBUG: DEBUG_OUTPUT("READY_FOR_QUERY:%s" % (data, ))
-                self.in_transaction = (data == b'T')
+                self._ready_for_query = data
                 break
             elif code == PG_B_AUTHENTICATION:
                 auth_method = _bytes_to_bint(data[:4])
@@ -640,7 +641,7 @@ class Connection(object):
                     if not PY2:
                         message = message.decode(self.encoding)
                     if errcode[:2] == b'23':
-                        errobj = IntegrityError( message)
+                        errobj = IntegrityError(message)
                     else:
                         errobj = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
@@ -712,6 +713,10 @@ class Connection(object):
         self._write(_bint_to_bytes(len(v) + 4) + v)
         self._process_messages(None)
 
+    @property
+    def is_dirty(self):
+        return self._ready_for_query in b'TE'
+
     def is_connect(self):
         return bool(self.sock)
 
@@ -729,7 +734,7 @@ class Connection(object):
 
     def execute(self, query, obj=None):
         if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
-        if not self.in_transaction:
+        if self._ready_for_query != b'T':
             self.begin()
         self._execute(query, obj)
 
@@ -738,6 +743,8 @@ class Connection(object):
 
     def begin(self):
         if DEBUG: DEBUG_OUTPUT('BEGIN')
+        if self._ready_for_query == b'E':
+            self.rollback()
         self._send_message(PG_F_QUERY, b"BEGIN\x00")
         self._process_messages(None)
 
