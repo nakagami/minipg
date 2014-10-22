@@ -437,7 +437,6 @@ class Cursor(object):
         pass
 
     def execute(self, query, args=()):
-        if DEBUG: DEBUG_OUTPUT('Cursor::execute()\t%s\t%s' % (query, args))
         if not self.connection or not self.connection.is_connect():
             raise ProgrammingError(u"08003:Lost connection")
         self.description = []
@@ -452,7 +451,6 @@ class Cursor(object):
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
-        if DEBUG: DEBUG_OUTPUT('Cursor::executemany()\t%s\t%s' % (query, seq_of_params))
         rowcount = 0
         for params in seq_of_params:
             self.execute(query, params)
@@ -460,7 +458,6 @@ class Cursor(object):
         self._rowcount = rowcount
 
     def fetchone(self):
-        if DEBUG: DEBUG_OUTPUT('Cursor::fetchone()')
         if not self.connection or not self.connection.is_connect():
             raise OperationalError(u"08003:Lost connection")
         if len(self._rows):
@@ -507,7 +504,6 @@ class Cursor(object):
 
 class Connection(object):
     def __init__(self, user, password, database, host, port, tzinfo, timeout, use_ssl):
-        if DEBUG: DEBUG_OUTPUT("Connection::__init__()")
         self.user = user
         self.password = password
         self.database = database
@@ -723,6 +719,7 @@ class Connection(object):
         return Cursor(self)
 
     def _execute(self, query, obj=None):
+        if DEBUG: DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
         self._send_message(
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
@@ -735,7 +732,6 @@ class Connection(object):
             self.commit()
 
     def execute(self, query, obj=None):
-        if DEBUG: DEBUG_OUTPUT('Connection::execute()\t%s' % (query, ))
         if self._ready_for_query != b'T':
             self.begin()
         self._execute(query, obj)
@@ -758,12 +754,12 @@ class Connection(object):
 
     def _rollback(self):
         if self.sock:
+            if DEBUG: DEBUG_OUTPUT('ROLLBACK')
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
             return self._process_messages(None)
         return None
 
     def rollback(self):
-        if DEBUG: DEBUG_OUTPUT('ROLLBACK')
         err = self._rollback()
         if err:
             raise err
