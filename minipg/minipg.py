@@ -629,21 +629,20 @@ class Connection(object):
                 if DEBUG: DEBUG_OUTPUT("NOTICE_RESPONSE:%s" % (HEX(data), ))
                 for s in data.split(b'\x00'):
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (s.decode(self.encoding)))
-            elif code == PG_B_ERROR_RESPONSE:
+            elif code == PG_B_ERROR_RESPONSE and not errobj:
                 if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (HEX(data), ))
-                if not errobj:
-                    err = data.split(b'\x00')
-                    for b in err:
-                        if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
-                    # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-                    errcode = err[1][1:]
-                    message = errcode + b':' + err[2][1:]
-                    if not PY2:
-                        message = message.decode(self.encoding)
-                    if errcode[:2] == b'23':
-                        errobj = IntegrityError(message)
-                    else:
-                        errobj = DatabaseError(message)
+                err = data.split(b'\x00')
+                for b in err:
+                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
+                # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
+                errcode = err[1][1:]
+                message = errcode + b':' + err[2][1:]
+                if not PY2:
+                    message = message.decode(self.encoding)
+                if errcode[:2] == b'23':
+                    errobj = IntegrityError(message)
+                else:
+                    errobj = DatabaseError(message)
             elif code == PG_B_COPY_OUT_RESPONSE:
                 if DEBUG: DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
             elif code == PG_COPY_DATA:
@@ -664,9 +663,7 @@ class Connection(object):
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
                 if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, HEX(data)))
-        if errobj:
-            raise errobj
-        return
+        return errobj
 
     def _read(self, ln):
         if not self.sock:
@@ -711,7 +708,9 @@ class Connection(object):
         v += b'\x00'
 
         self._write(_bint_to_bytes(len(v) + 4) + v)
-        self._process_messages(None)
+        err = self._process_messages(None)
+        if err:
+            raise err
 
     @property
     def is_dirty(self):
@@ -728,7 +727,10 @@ class Connection(object):
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
         )
-        self._process_messages(obj)
+        err = self._process_messages(obj)
+        if err:
+            self._rollback()
+            raise err
         if self.autocommit:
             self.commit()
 
@@ -754,11 +756,17 @@ class Connection(object):
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
             self._process_messages(None)
 
-    def rollback(self):
-        if DEBUG: DEBUG_OUTPUT('ROLLBACK')
+    def _rollback(self):
         if self.sock:
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-            self._process_messages(None)
+            return self._process_messages(None)
+        return None
+
+    def rollback(self):
+        if DEBUG: DEBUG_OUTPUT('ROLLBACK')
+        err = self._rollback()
+        if err:
+            raise err
 
     def reopen(self):
         self.close()
