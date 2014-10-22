@@ -141,9 +141,6 @@ cdef class Connection:
 
     cdef void _send_message(Connection self, int code, bytes data)
 
-    @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
-    cdef object _process_messages(Connection self, object obj) except *
-
     cdef bytes _read(Connection self, int ln)
 
     @cython.locals(n=cython.int)
