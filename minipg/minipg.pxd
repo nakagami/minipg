@@ -136,9 +136,12 @@ cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, encoding, sock
     cdef tzinfo, use_tzinfo
     cdef int autocommit
-    cdef _ready_for_query
+    cdef _ready_for_query, encoders
 
     cpdef escape_parameter(Connection self, v)
+
+    @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
+    cpdef object _process_messages(Connection self, object obj)
 
     cdef void _send_message(Connection self, int code, bytes data)
 
