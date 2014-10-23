@@ -138,7 +138,7 @@ cdef class Connection:
     cdef int autocommit
     cdef _ready_for_query
 
-    cpdef escape_parameter(v)
+    cpdef escape_parameter(Connection self, v)
 
     cdef void _send_message(Connection self, int code, bytes data)
 
