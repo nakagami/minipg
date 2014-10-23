@@ -307,47 +307,6 @@ def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     else:
         return bytes([(val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff])
 
-_escape_hook = {}
-
-def add_escape_hook(t, func):
-    _escape_hook[t] = func
-
-def escape_parameter(v):
-    t = type(v)
-    func = _escape_hook.get(t)
-    if func:
-        return func(v)
-    if v is None:
-        return 'NULL'
-    elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
-        return u"'" + v.replace(u"'", u"''") + u"'"
-    elif PY2 and t == str:    # PY2 str
-        v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
-        return "'" + v.replace("'", "''") + "'"
-    elif t == bytearray or t == bytes:        # binary
-        return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
-    elif t == bool:
-        return u"TRUE" if v else u"FALSE"
-    elif t == time.struct_time:
-        return u'%04d-%02d-%02d %02d:%02d:%02d' % (
-            v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
-    elif t == datetime.datetime:
-        return "'" + str(v) + "'"
-    elif t == datetime.date:
-        return "'" + str(v) + "'"
-    elif t == datetime.timedelta:
-        if v.seconds:
-            return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
-        else:
-            return u"interval '%d day'" % (v.days, )
-    elif t == int or t == float or (PY2 and t == long):
-        return str(v)
-    elif t == decimal.Decimal:
-        return "'" + str(v) + "'"
-    elif t == list or t == tuple:
-        return u'{' + u','.join([escape_parameter(e) for e in v]) + u'}'
-    else:
-        return "'" + str(v) + "'"
 
 Date = datetime.date
 Time = datetime.time
@@ -444,7 +403,7 @@ class Cursor(object):
         self.query = query
         self.args = args
         if args:
-            escaped_args = tuple(escape_parameter(arg) for arg in args)
+            escaped_args = tuple(self.connection.escape_parameter(arg) for arg in args)
             query = query.replace('%', '%%').replace('%%s', '%s')
             query = query % escaped_args
             query = query.replace('%%', '%')
@@ -517,6 +476,7 @@ class Connection(object):
         self._ready_for_query = b'I'
         self.use_tzinfo = True
         self._open()
+        self.encoders = {}
 
     def __enter__(self):
         return self
@@ -707,6 +667,43 @@ class Connection(object):
         err = self._process_messages(None)
         if err:
             raise err
+
+    def escape_parameter(self, v):
+        t = type(v)
+        func = self.encoders.get(t)
+        if func:
+            return func(v)
+        if v is None:
+            return 'NULL'
+        elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
+            return u"'" + v.replace(u"'", u"''") + u"'"
+        elif PY2 and t == str:    # PY2 str
+            v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
+            return "'" + v.replace("'", "''") + "'"
+        elif t == bytearray or t == bytes:        # binary
+            return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
+        elif t == bool:
+            return u"TRUE" if v else u"FALSE"
+        elif t == time.struct_time:
+            return u'%04d-%02d-%02d %02d:%02d:%02d' % (
+                v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
+        elif t == datetime.datetime:
+            return "'" + str(v) + "'"
+        elif t == datetime.date:
+            return "'" + str(v) + "'"
+        elif t == datetime.timedelta:
+            if v.seconds:
+                return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
+            else:
+                return u"interval '%d day'" % (v.days, )
+        elif t == int or t == float or (PY2 and t == long):
+            return str(v)
+        elif t == decimal.Decimal:
+            return "'" + str(v) + "'"
+        elif t == list or t == tuple:
+            return u'{' + u','.join([self.escape_parameter(e) for e in v]) + u'}'
+        else:
+            return "'" + str(v) + "'"
 
     @property
     def is_dirty(self):

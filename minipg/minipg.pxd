@@ -131,13 +131,14 @@ cdef long long _bytes_to_bint(bytes b)
 
 cdef bytes _bint_to_bytes(int val)
 
-cpdef escape_parameter(v)
 
 cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, encoding, sock
     cdef tzinfo, use_tzinfo
     cdef int autocommit
     cdef _ready_for_query
+
+    cpdef escape_parameter(v)
 
     cdef void _send_message(Connection self, int code, bytes data)
 
