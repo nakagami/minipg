@@ -546,17 +546,25 @@ class Connection(object):
                     for i in range(count):
                         name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
-                        type_oid = _bytes_to_bint(data[n+6:n+10])
-                        if type_oid == PG_TYPE_VARCHAR:
-                            ln = _bytes_to_bint(data[n+12:n+16]) - 4
+                        type_code = _bytes_to_bint(data[n+6:n+10])
+                        if type_code == PG_TYPE_VARCHAR:
+                            size = _bytes_to_bint(data[n+12:n+16]) - 4
+                            precision = None
+                            scale = None
+                        elif type_code == PG_TYPE_NUMERIC:
+                            size = _bytes_to_bint(data[n+10:n+12])
+                            precision = _bytes_to_bint(data[n+12:n+14])
+                            scale = precision - _bytes_to_bint(data[n+14:n+16])
                         else:
-                            ln = _bytes_to_bint(data[n+10:n+12])
+                            size = _bytes_to_bint(data[n+10:n+12])
+                            precision =None
+                            scale = None
 #                        table_oid = _bytes_to_bint(data[n:n+4])
 #                        table_pos = _bytes_to_bint(data[n+4:n+6])
 #                        size = _bytes_to_bint(data[n+10:n+12])
 #                        modifier = _bytes_to_bint(data[n+12:n+16])
 #                        format = _bytes_to_bint(data[n+16:n+18]),
-                        field = (name, type_oid, None, ln, None, None, None)
+                        field = (name, type_code, None, size, precision, scale, None)
                         n += 18
                         obj.description[idx] = field
                         idx += 1
