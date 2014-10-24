@@ -403,10 +403,12 @@ class Cursor(object):
         self.query = query
         self.args = args
         if args:
-            escaped_args = tuple(self.connection.escape_parameter(arg) for arg in args)
-            query = query.replace('%', '%%').replace('%%s', '%s')
+            escaped_args = tuple(
+                self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args
+            )
+            query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
             query = query % escaped_args
-            query = query.replace('%%', '%')
+            query = query.replace(u'%%', u'%')
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
