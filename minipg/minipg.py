@@ -175,7 +175,7 @@ PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
 class TZ(datetime.tzinfo):
-    def __init__(self, offset):
+    def __init__(self, offset='+00'):
         self.offset = offset
         hours = int(self.offset[:3])
         if len(offset) > 3:
