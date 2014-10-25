@@ -400,7 +400,6 @@ class Cursor(object):
             raise ProgrammingError(u"08003:Lost connection")
         self.description = []
         self._rows.clear()
-        self.query = query
         self.args = args
         if args:
             escaped_args = tuple(
@@ -409,6 +408,7 @@ class Cursor(object):
             query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
             query = query % escaped_args
             query = query.replace(u'%%', u'%')
+        self.query = query
         self.connection.execute(query, self)
 
     def executemany(self, query, seq_of_params):
