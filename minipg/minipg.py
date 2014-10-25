@@ -31,7 +31,7 @@ import datetime
 import time
 import collections
 
-VERSION = (0, 3, 6)
+VERSION = (0, 3, 7)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
@@ -761,7 +761,7 @@ class Connection(object):
         if self.sock:
             if DEBUG: DEBUG_OUTPUT('ROLLBACK')
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-        return self.process_messages(None)
+        self.process_messages(None)
 
     def reopen(self):
         self.close()
