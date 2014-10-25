@@ -629,6 +629,11 @@ class Connection(object):
                 if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, HEX(data)))
         return errobj
 
+    def process_messages(self, obj):
+        err = self._process_messages(obj)
+        if err:
+            raise err
+
     def _read(self, ln):
         if not self.sock:
             raise OperationalError(u"08003:Lost connection")
@@ -672,9 +677,7 @@ class Connection(object):
         v += b'\x00'
 
         self._write(_bint_to_bytes(len(v) + 4) + v)
-        err = self._process_messages(None)
-        if err:
-            raise err
+        self.process_messages(None)
 
     def escape_parameter(self, v):
         t = type(v)
@@ -729,9 +732,7 @@ class Connection(object):
             PG_F_QUERY,
             query.encode(self.encoding) + b'\x00',
         )
-        err = self._process_messages(obj)
-        if err:
-            raise err
+        self.process_messages(obj)
         if self.autocommit:
             self.commit()
 
@@ -754,19 +755,13 @@ class Connection(object):
         if DEBUG: DEBUG_OUTPUT('COMMIT')
         if self.sock:
             self._send_message(PG_F_QUERY, b"COMMIT\x00")
-            self._process_messages(None)
+            self.process_messages(None)
 
-    def _rollback(self):
+    def rollback(self):
         if self.sock:
             if DEBUG: DEBUG_OUTPUT('ROLLBACK')
             self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
-            return self._process_messages(None)
-        return None
-
-    def rollback(self):
-        err = self._rollback()
-        if err:
-            raise err
+        return self.process_messages(None)
 
     def reopen(self):
         self.close()
