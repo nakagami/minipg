@@ -683,7 +683,7 @@ class Connection(object):
         t = type(v)
         func = self.encoders.get(t)
         if func:
-            return func(v)
+            return func(self, v)
         if v is None:
             return 'NULL'
         elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
