@@ -551,7 +551,6 @@ class Connection(object):
                         if not PY2:
                             try:
                                 name = name.decode(self.encoding)
-                                print(name)
                             except UnicodeDecodeError:
                                 pass
                         type_code = _bytes_to_bint(data[n+6:n+10])
