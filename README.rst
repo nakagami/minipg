@@ -2,16 +2,20 @@
 minipg
 =============
 
-Yet another Python PostgreSQL database driver
+Yet another Python PostgreSQL database driver.
+
+Pure python or Cython http://cython.org/ accelaleted.
 
 Requirements
 -----------------
 
-- Python 2.7, 3.3+
+- Python 2.7, 3.3+, PyPy, jython 2.7, IronPython 2.7
 
 
 Installation
 -----------------
+
+It can install as package or module.
 
 Install as a package
 
