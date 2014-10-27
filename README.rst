@@ -10,6 +10,7 @@ Requirements
 -----------------
 
 - Python 2.7, 3.3+, PyPy, jython 2.7, IronPython 2.7
+- Cython 21.x or higher optinally.
 
 
 Installation
