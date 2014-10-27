@@ -548,6 +548,12 @@ class Connection(object):
                     for i in range(count):
                         name = data[n:n+data[n:].find(b'\x00')]
                         n += len(name) + 1
+                        if not PY2:
+                            try:
+                                name = name.decode(self.encoding)
+                                print(name)
+                            except UnicodeDecodeError:
+                                pass
                         type_code = _bytes_to_bint(data[n+6:n+10])
                         if type_code == PG_TYPE_VARCHAR:
                             size = _bytes_to_bint(data[n+12:n+16]) - 4
