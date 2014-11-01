@@ -146,7 +146,7 @@ cdef class Connection:
                     size=cython.int, precision=cython.int, scale=cython.int)
     cdef object _process_messages(Connection self, object obj)
 
-    cpdef process_messages(Connection self, object obj)
+    cdef void process_messages(Connection self, object obj) except *
 
     cdef void _send_message(Connection self, int code, bytes data)
 
@@ -159,7 +159,7 @@ cdef class Connection:
     cdef void _open(Connection self)
 
     cpdef begin(Connection self)
-    cdef void _execute(Connection self, object query, object obj)
+    cdef void _execute(Connection self, object query, object obj) except *
     cpdef commit(Connection self)
     cpdef rollback(Connection self)
 
