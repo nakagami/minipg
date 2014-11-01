@@ -140,20 +140,26 @@ cdef class Connection:
 
     cpdef escape_parameter(Connection self, v)
 
-    @cython.locals(code=cython.int, n=cython.int, ln=cython.int)
-    cpdef object _process_messages(Connection self, object obj)
+    @cython.locals(code=cython.int, n=cython.int, ln=cython.int,
+                    salt=cython.bytes, hash1=cython.bytes, hash2=cython.bytes,
+                    type_code=cython.int,
+                    size=cython.int, precision=cython.int, scale=cython.int)
+    cdef object _process_messages(Connection self, object obj)
+
+    cpdef process_messages(Connection self, object obj)
 
     cdef void _send_message(Connection self, int code, bytes data)
 
     cdef bytes _read(Connection self, int ln)
 
     @cython.locals(n=cython.int)
-    cdef _write(Connection self, bytes b)
+    cdef void _write(Connection self, bytes b)
 
     @cython.locals(v=bytes)
-    cdef _open(Connection self)
+    cdef void _open(Connection self)
 
     cpdef begin(Connection self)
+    cdef void _execute(Connection self, object query, object obj)
     cpdef commit(Connection self)
     cpdef rollback(Connection self)
 

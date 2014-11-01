@@ -296,17 +296,19 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
 # ----------------------------------------------------------------------------
 
 def _bytes_to_bint(b):     # Read as big endian
-    r = 0
-    for n in b:
-        r = r * 256 + (ord(n) if PY2 else n)
-    return r
+    if PY2:
+        r = 0
+        for n in b:
+            r = r * 256 + ord(n)
+        return r
+    else:
+        return int.from_bytes(b, byteorder='big')
 
 def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     if PY2:
         return chr((val >> 24) & 0xff) + chr((val >> 16) & 0xff) + chr((val >> 8) & 0xff) + chr(val & 0xff)
     else:
-        return bytes([(val >> 24) & 0xff, (val >> 16) & 0xff, (val >> 8) & 0xff, val & 0xff])
-
+        return val.to_bytes(4, byteorder='big')
 
 Date = datetime.date
 Time = datetime.time
@@ -517,7 +519,7 @@ class Connection(object):
                     salt = data[4:]
                     hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
-                    self._send_message(PG_F_PASSWORD_MESSAGE, b'md5'+hash2+'\x00')
+                    self._send_message(PG_F_PASSWORD_MESSAGE, b''.join([b'md5',hash2,'\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == PG_B_PARAMETER_STATUS:
@@ -730,7 +732,7 @@ class Connection(object):
     def cursor(self):
         return Cursor(self)
 
-    def _execute(self, query, obj=None):
+    def _execute(self, query, obj):
         if DEBUG: DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
         self._send_message(
             PG_F_QUERY,
