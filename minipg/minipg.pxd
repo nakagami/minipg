@@ -138,7 +138,8 @@ cdef class Connection:
     cdef int autocommit
     cdef _ready_for_query, encoders
 
-    cpdef escape_parameter(Connection self, v)
+    @cython.locals(t=cython.type)
+    cpdef escape_parameter(Connection self, object v)
 
     @cython.locals(code=cython.int, n=cython.int, ln=cython.int,
                     salt=cython.bytes, hash1=cython.bytes, hash2=cython.bytes,
