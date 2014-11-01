@@ -75,6 +75,7 @@ cdef int PG_TYPE_CASH
 cdef int PG_TYPE_MACADDR
 cdef int PG_TYPE_INET
 cdef int PG_TYPE_CIDR
+cdef int PG_TYPE_NAMEARRAY
 cdef int PG_TYPE_INT2ARRAY
 cdef int PG_TYPE_INT4ARRAY
 cdef int PG_TYPE_TEXTARRAY
