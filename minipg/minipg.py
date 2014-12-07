@@ -32,7 +32,7 @@ import time
 import collections
 import binascii
 
-VERSION = (0, 4, 0)
+VERSION = (0, 4, 1)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
