@@ -145,7 +145,8 @@ cdef class Connection:
     @cython.locals(code=cython.int, n=cython.int, ln=cython.int,
                     salt=cython.bytes, hash1=cython.bytes, hash2=cython.bytes,
                     type_code=cython.int,
-                    size=cython.int, precision=cython.int, scale=cython.int)
+                    size=cython.int, precision=cython.int, scale=cython.int,
+                    field=cython.tuple)
     cdef object _process_messages(Connection self, object obj)
 
     cdef void process_messages(Connection self, object obj) except *

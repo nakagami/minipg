@@ -30,6 +30,7 @@ import decimal
 import datetime
 import time
 import collections
+import binascii
 
 VERSION = (0, 4, 0)
 __version__ = '%s.%s.%s' % VERSION
@@ -43,10 +44,6 @@ DEBUG = False
 
 def DEBUG_OUTPUT(s):
     print(s, end=' \n', file=sys.stderr)
-
-def HEX(data):
-    import binascii
-    return binascii.b2a_hex(data)
 
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.3/static/protocol.html
@@ -528,7 +525,7 @@ class Connection(object):
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
             elif code == PG_B_BACKEND_KEY_DATA:
-                if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (HEX(data), ))
+                if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (binascii.b2a_hex(data), ))
             elif code == PG_B_COMMAND_COMPLETE:
                 if obj:
                     command = data[:-1].decode('ascii')
@@ -542,7 +539,7 @@ class Connection(object):
                                 break
             elif code == PG_B_ROW_DESCRIPTION:
                 if obj:
-                    if DEBUG: DEBUG_OUTPUT("ROW_DESCRIPTION:%s" % (HEX(data), ))
+                    if DEBUG: DEBUG_OUTPUT("ROW_DESCRIPTION:%s" % (binascii.b2a_hex(data), ))
                     count = _bytes_to_bint(data[0:2])
                     obj.description = [None] * count
                     n = 2
@@ -579,7 +576,7 @@ class Connection(object):
                     if DEBUG: DEBUG_OUTPUT('\t\t%s' % (obj.description))
             elif code == PG_B_DATA_ROW:
                 if obj:
-                    if DEBUG: DEBUG_OUTPUT("DATA_ROW:%s" % (HEX(data), ))
+                    if DEBUG: DEBUG_OUTPUT("DATA_ROW:%s" % (binascii.b2a_hex(data), ))
                     n = 2
                     row = []
                     while n < len(data):
@@ -596,11 +593,11 @@ class Connection(object):
                     obj._rows.append(tuple(row))
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
             elif code == PG_B_NOTICE_RESPONSE:
-                if DEBUG: DEBUG_OUTPUT("NOTICE_RESPONSE:%s" % (HEX(data), ))
+                if DEBUG: DEBUG_OUTPUT("NOTICE_RESPONSE:%s" % (binascii.b2a_hex(data), ))
                 for s in data.split(b'\x00'):
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (s.decode(self.encoding)))
             elif code == PG_B_ERROR_RESPONSE and not errobj:
-                if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (HEX(data), ))
+                if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (binascii.b2a_hex(data), ))
                 err = data.split(b'\x00')
                 for b in err:
                     if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
@@ -632,7 +629,7 @@ class Connection(object):
                 # send PG_COPY_DONE and PG_F_SYNC
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
-                if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, HEX(data)))
+                if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, binascii.b2a_hex(data)))
         return errobj
 
     def process_messages(self, obj):
