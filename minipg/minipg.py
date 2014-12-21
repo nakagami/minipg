@@ -715,7 +715,7 @@ class Connection(object):
         elif t == decimal.Decimal:
             return "'" + str(v) + "'"
         elif t == list or t == tuple:
-            return u'{' + u','.join([self.escape_parameter(e) for e in v]) + u'}'
+            return u','.join([self.escape_parameter(e) for e in v])
         else:
             return "'" + str(v) + "'"
 
