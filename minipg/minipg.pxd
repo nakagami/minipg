@@ -161,7 +161,7 @@ cdef class Connection:
     cdef tzinfo, use_tzinfo
     cdef int autocommit
     cdef _ready_for_query
-    cpdef encoders, encoding
+    cdef public object encoding, encoders
 
     @cython.locals(t=cython.type)
     cpdef escape_parameter(Connection self, object v)
