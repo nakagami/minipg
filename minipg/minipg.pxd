@@ -158,10 +158,8 @@ cdef bytes _bint_to_bytes(int val)
 
 cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, sock
-    cdef tzinfo, use_tzinfo
-    cdef int autocommit
     cdef _ready_for_query
-    cdef public object encoding, encoders
+    cdef public object encoding, encoders, autocommit, tzinfo, use_tzinfo
 
     @cython.locals(t=cython.type)
     cpdef escape_parameter(Connection self, object v)
