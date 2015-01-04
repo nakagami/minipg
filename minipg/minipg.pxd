@@ -157,7 +157,7 @@ cdef bytes _bint_to_bytes(int val)
 
 
 cdef class Connection:
-    cdef user, password, database, host, port, timeout, use_ssl, encoding, sock
+    cdef user, password, database, host, port, timeout, use_ssl, sock
     cdef tzinfo, use_tzinfo
     cdef int autocommit
     cdef _ready_for_query, encoders
