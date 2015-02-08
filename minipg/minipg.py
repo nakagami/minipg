@@ -47,20 +47,9 @@ def DEBUG_OUTPUT(s):
 
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.3/static/protocol.html
-
 # http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
-PG_F_BIND = ord(b'B')
-PG_F_CLOSE = ord(b'C')
-PG_F_COPY_FALL = ord(b'f')
-PG_F_DESCRIBE = ord(b'D')
-PG_F_EXECUTE = ord(b'E')
-PG_F_FLUSH = ord(b'H')
-PG_F_FUNCTION_CALL = ord(b'F')
-PG_F_PARSE = ord(b'P')
 PG_F_PASSWORD_MESSAGE = ord(b'p')
 PG_F_QUERY = ord(b'Q')
-PG_F_SYNC = ord(b'S')
-PG_F_TERMINATE = ord(b'X')
 
 # postgresql-9.3.5/src/include/catalog/pg_type.h
 PG_TYPE_BOOL = 16
@@ -464,12 +453,11 @@ class Connection(object):
 
 
     def _send_message(self, code, data):
-        # send code, data and PG_F_FLUSH
         self._write(b''.join([
                 chr(code) if PY2 else bytes([code]),
                 _bint_to_bytes(len(data) + 4),
                 data,
-                b'H\x00\x00\x00\x04',
+                b'H\x00\x00\x00\x04',   # Flush
             ])
         )
 
@@ -590,10 +578,10 @@ class Connection(object):
                     buf = obj.read(8192)
                     if not buf:
                         break
-                    # send PG_COPY_DATA
+                    # send CopyData
                     self._write(b'd' + _bint_to_bytes(len(buf) + 4))
                     self._write(buf)
-                # send PG_COPY_DONE and PG_F_SYNC
+                # send CopyDone and Sync
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
                 pass
@@ -740,7 +728,7 @@ class Connection(object):
     def close(self):
         if DEBUG: DEBUG_OUTPUT('Connection::close()')
         if self.sock:
-            # send PG_F_TERMINATE
+            # send Terminate
             self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None

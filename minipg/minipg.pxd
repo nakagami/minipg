@@ -27,18 +27,8 @@ cdef int PY2
 cdef int DEBUG
 cdef void DEBUG_OUTPUT(str s)
 
-cdef int PG_F_BIND
-cdef int PG_F_CLOSE
-cdef int PG_F_COPY_FALL
-cdef int PG_F_DESCRIBE
-cdef int PG_F_EXECUTE
-cdef int PG_F_FLUSH
-cdef int PG_F_FUNCTION_CALL
-cdef int PG_F_PARSE
 cdef int PG_F_PASSWORD_MESSAGE
 cdef int PG_F_QUERY
-cdef int PG_F_SYNC
-cdef int PG_F_TERMINATE
 
 cdef int PG_TYPE_BOOL
 cdef int PG_TYPE_BYTEA
