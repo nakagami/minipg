@@ -48,8 +48,6 @@ def DEBUG_OUTPUT(s):
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.3/static/protocol.html
 # http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
-PG_F_PASSWORD_MESSAGE = ord(b'p')
-PG_F_QUERY = ord(b'Q')
 
 # postgresql-9.3.5/src/include/catalog/pg_type.h
 PG_TYPE_BOOL = 16
@@ -452,9 +450,9 @@ class Connection(object):
         self.close()
 
 
-    def _send_message(self, code, data):
+    def _send_message(self, message, data):
         self._write(b''.join([
-                chr(code) if PY2 else bytes([code]),
+                message,
                 _bint_to_bytes(len(data) + 4),
                 data,
                 b'H\x00\x00\x00\x04',   # Flush
@@ -481,7 +479,7 @@ class Connection(object):
                     salt = data[4:]
                     hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
-                    self._send_message(PG_F_PASSWORD_MESSAGE, b''.join([b'md5',hash2,'\x00']))
+                    self._send_message(b'p', b''.join([b'md5',hash2,'\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == 83:    # ParamterStatus('S')
@@ -686,10 +684,7 @@ class Connection(object):
 
     def _execute(self, query, obj):
         if DEBUG: DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
-        self._send_message(
-            PG_F_QUERY,
-            query.encode(self.encoding) + b'\x00',
-        )
+        self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
             self.commit()
@@ -706,19 +701,19 @@ class Connection(object):
         if DEBUG: DEBUG_OUTPUT('BEGIN')
         if self._ready_for_query == b'E':
             self.rollback()
-        self._send_message(PG_F_QUERY, b"BEGIN\x00")
+        self._send_message(b'Q', b"BEGIN\x00")
         self._process_messages(None)
 
     def commit(self):
         if DEBUG: DEBUG_OUTPUT('COMMIT')
         if self.sock:
-            self._send_message(PG_F_QUERY, b"COMMIT\x00")
+            self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
 
     def rollback(self):
         if self.sock:
             if DEBUG: DEBUG_OUTPUT('ROLLBACK')
-            self._send_message(PG_F_QUERY, b"ROLLBACK\x00")
+            self._send_message(b'Q', b"ROLLBACK\x00")
         self.process_messages(None)
 
     def reopen(self):

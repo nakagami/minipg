@@ -27,9 +27,6 @@ cdef int PY2
 cdef int DEBUG
 cdef void DEBUG_OUTPUT(str s)
 
-cdef int PG_F_PASSWORD_MESSAGE
-cdef int PG_F_QUERY
-
 cdef int PG_TYPE_BOOL
 cdef int PG_TYPE_BYTEA
 cdef int PG_TYPE_CHAR
@@ -140,7 +137,7 @@ cdef class Connection:
 
     cdef void process_messages(Connection self, object obj) except *
 
-    cdef void _send_message(Connection self, int code, bytes data)
+    cdef void _send_message(Connection self, bytes message, bytes data)
 
     cdef bytes _read(Connection self, int ln)
 
