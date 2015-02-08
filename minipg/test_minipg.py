@@ -239,6 +239,5 @@ class TestMiniPG(unittest.TestCase):
         self.connection.commit()
 
 if __name__ == "__main__":
-    import unittest
     unittest.main()
 
