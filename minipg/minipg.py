@@ -49,39 +49,16 @@ def DEBUG_OUTPUT(s):
 # http://www.postgresql.org/docs/9.3/static/protocol.html
 
 # http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
-PG_B_AUTHENTICATION = ord(b'R')
-PG_B_BACKEND_KEY_DATA = ord(b'K')
 PG_F_BIND = ord(b'B')
-PG_B_BIND_COMPLETE = ord(b'2')
 PG_F_CLOSE = ord(b'C')
-PG_B_CLOSE_COMPLETE = ord(b'3')
-PG_B_COMMAND_COMPLETE = ord(b'C')
-PG_COPY_DATA = ord(b'd')
-PG_COPY_DONE = ord(b'c')
 PG_F_COPY_FALL = ord(b'f')
-PG_B_COPY_IN_RESPONSE = ord(b'G')
-PG_B_COPY_OUT_RESPONSE = ord(b'H')
-PG_B_COPY_BOTH_RESPONSE = ord(b'W')
-PG_B_DATA_ROW = ord(b'D')
 PG_F_DESCRIBE = ord(b'D')
-PG_B_EMPTY_QUERY_RESPONSE = ord(b'I')
-PG_B_ERROR_RESPONSE = ord(b'E')
 PG_F_EXECUTE = ord(b'E')
 PG_F_FLUSH = ord(b'H')
 PG_F_FUNCTION_CALL = ord(b'F')
-PG_B_FUNCTION_CALL_RESPONSE = ord(b'V')
-PG_B_NO_DATA = ord(b'n')
-PG_B_NOTICE_RESPONSE = ord(b'N')
-PG_B_NOTIFICATION_RESPONSE = ord(b'A')
-PG_B_PARAMETER_DESCRIPTION = ord(b't')
-PG_B_PARAMETER_STATUS = ord(b'S')
 PG_F_PARSE = ord(b'P')
-PG_B_PARSE_COMPLETE = ord(b'1')
 PG_F_PASSWORD_MESSAGE = ord(b'p')
-PG_B_PORTAL_SUSPEND = ord(b's')
 PG_F_QUERY = ord(b'Q')
-PG_B_READY_FOR_QUERY = ord(b'Z')
-PG_B_ROW_DESCRIPTION = ord(b'T')
 PG_F_SYNC = ord(b'S')
 PG_F_TERMINATE = ord(b'X')
 
@@ -502,13 +479,13 @@ class Connection(object):
             code = ord(self._read(1))
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
-            if code == PG_B_READY_FOR_QUERY:
-                if DEBUG: DEBUG_OUTPUT("READY_FOR_QUERY:%s" % (data, ))
+            if DEBUG:
+                DEBUG_OUTPUT("%d\t%i\t%s" % (code, ln, binascii.b2a_hex(data)))
+            if code == 90:  # ReadyForQuery('Z')
                 self._ready_for_query = data
                 break
-            elif code == PG_B_AUTHENTICATION:
+            elif code == 82:    # Authenticaton('R')
                 auth_method = _bytes_to_bint(data[:4])
-                if DEBUG: DEBUG_OUTPUT("AUTHENTICATION:auth_method=%d" % (auth_method,))
                 if auth_method == 0:      # trust
                     pass
                 elif auth_method == 5:    # md5
@@ -519,88 +496,80 @@ class Connection(object):
                     self._send_message(PG_F_PASSWORD_MESSAGE, b''.join([b'md5',hash2,'\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
-            elif code == PG_B_PARAMETER_STATUS:
+            elif code == 83:    # ParamterStatus('S')
                 k, v, _ = data.split(b'\x00')
-                if DEBUG: DEBUG_OUTPUT("PARAMETER_STATUS:%s=%s" % (k, v))
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
-            elif code == PG_B_BACKEND_KEY_DATA:
-                if DEBUG: DEBUG_OUTPUT("BACKEND_KEY_DATA:%s" % (binascii.b2a_hex(data), ))
-            elif code == PG_B_COMMAND_COMPLETE:
-                if obj:
-                    command = data[:-1].decode('ascii')
-                    if DEBUG: DEBUG_OUTPUT("COMMAND_COMPLETE:%s" % (command, ))
-                    if command == 'SHOW':
-                        obj._rowcount = 1
+            elif code == 75:    # BackendKeyData('K')
+                pass
+            elif code == 67:    # CommandComplte('C')
+                if not obj:
+                    continue
+                command = data[:-1].decode('ascii')
+                if command == 'SHOW':
+                    obj._rowcount = 1
+                else:
+                    for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
+                        if command[:len(k)] == k:
+                            obj._rowcount = int(command.split(' ')[-1])
+                            break
+            elif code == 84:    # RowDescription('T')
+                if not obj:
+                    continue
+                count = _bytes_to_bint(data[0:2])
+                obj.description = [None] * count
+                n = 2
+                idx = 0
+                for i in range(count):
+                    name = data[n:n+data[n:].find(b'\x00')]
+                    n += len(name) + 1
+                    try:
+                        name = name.decode(self.encoding)
+                    except UnicodeDecodeError:
+                        pass
+                    type_code = _bytes_to_bint(data[n+6:n+10])
+                    if type_code == PG_TYPE_VARCHAR:
+                        size = _bytes_to_bint(data[n+12:n+16]) - 4
+                        precision = -1
+                        scale = -1
+                    elif type_code == PG_TYPE_NUMERIC:
+                        size = _bytes_to_bint(data[n+10:n+12])
+                        precision = _bytes_to_bint(data[n+12:n+14])
+                        scale = precision - _bytes_to_bint(data[n+14:n+16])
                     else:
-                        for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
-                            if command[:len(k)] == k:
-                                obj._rowcount = int(command.split(' ')[-1])
-                                break
-            elif code == PG_B_ROW_DESCRIPTION:
-                if obj:
-                    if DEBUG: DEBUG_OUTPUT("ROW_DESCRIPTION:%s" % (binascii.b2a_hex(data), ))
-                    count = _bytes_to_bint(data[0:2])
-                    obj.description = [None] * count
-                    n = 2
-                    idx = 0
-                    for i in range(count):
-                        name = data[n:n+data[n:].find(b'\x00')]
-                        n += len(name) + 1
-                        try:
-                            name = name.decode(self.encoding)
-                        except UnicodeDecodeError:
-                            pass
-                        type_code = _bytes_to_bint(data[n+6:n+10])
-                        if type_code == PG_TYPE_VARCHAR:
-                            size = _bytes_to_bint(data[n+12:n+16]) - 4
-                            precision = -1
-                            scale = -1
-                        elif type_code == PG_TYPE_NUMERIC:
-                            size = _bytes_to_bint(data[n+10:n+12])
-                            precision = _bytes_to_bint(data[n+12:n+14])
-                            scale = precision - _bytes_to_bint(data[n+14:n+16])
-                        else:
-                            size = _bytes_to_bint(data[n+10:n+12])
-                            precision = -1
-                            scale = -1
+                        size = _bytes_to_bint(data[n+10:n+12])
+                        precision = -1
+                        scale = -1
 #                        table_oid = _bytes_to_bint(data[n:n+4])
 #                        table_pos = _bytes_to_bint(data[n+4:n+6])
 #                        size = _bytes_to_bint(data[n+10:n+12])
 #                        modifier = _bytes_to_bint(data[n+12:n+16])
 #                        format = _bytes_to_bint(data[n+16:n+18]),
-                        field = (name, type_code, None, size, precision, scale, None)
-                        n += 18
-                        obj.description[idx] = field
-                        idx += 1
-                    if DEBUG: DEBUG_OUTPUT('\t\t%s' % (obj.description))
-            elif code == PG_B_DATA_ROW:
-                if obj:
-                    if DEBUG: DEBUG_OUTPUT("DATA_ROW:%s" % (binascii.b2a_hex(data), ))
-                    n = 2
-                    row = []
-                    while n < len(data):
-                        if data[n:n+4] == b'\xff\xff\xff\xff':
-                            row.append(None)
-                            n += 4
-                        else:
-                            ln = _bytes_to_bint(data[n:n+4])
-                            n += 4
-                            row.append(data[n:n+ln])
-                            n += ln
-                    for i in range(len(row)):
-                        row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo, self.use_tzinfo)
-                    obj._rows.append(tuple(row))
-                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (row, ))
-            elif code == PG_B_NOTICE_RESPONSE:
-                if DEBUG: DEBUG_OUTPUT("NOTICE_RESPONSE:%s" % (binascii.b2a_hex(data), ))
-                for s in data.split(b'\x00'):
-                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (s.decode(self.encoding)))
-            elif code == PG_B_ERROR_RESPONSE and not errobj:
-                if DEBUG: DEBUG_OUTPUT("ERROR_RESPONSE:%s" % (binascii.b2a_hex(data), ))
+                    field = (name, type_code, None, size, precision, scale, None)
+                    n += 18
+                    obj.description[idx] = field
+                    idx += 1
+            elif code == 68:    # DataRow('D')
+                if not obj:
+                    continue
+                n = 2
+                row = []
+                while n < len(data):
+                    if data[n:n+4] == b'\xff\xff\xff\xff':
+                        row.append(None)
+                        n += 4
+                    else:
+                        ln = _bytes_to_bint(data[n:n+4])
+                        n += 4
+                        row.append(data[n:n+ln])
+                        n += ln
+                for i in range(len(row)):
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo, self.use_tzinfo)
+                obj._rows.append(tuple(row))
+            elif code == 78:    # NoticeResponse('N')
+                pass
+            elif code == 69 and not errobj: # ErrorResponse('E')
                 err = data.split(b'\x00')
-                for b in err:
-                    if DEBUG: DEBUG_OUTPUT("\t\t%s" % (b.decode(self.encoding), ))
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[1][1:]
                 message = errcode + b':' + err[2][1:]
@@ -610,15 +579,13 @@ class Connection(object):
                     errobj = IntegrityError(message)
                 else:
                     errobj = DatabaseError(message)
-            elif code == PG_B_COPY_OUT_RESPONSE:
-                if DEBUG: DEBUG_OUTPUT("COPY_OUT_RESPONSE:")
-            elif code == PG_COPY_DATA:
-                if DEBUG: DEBUG_OUTPUT("COPY_DATA")
+            elif code == 72:    # CopyOutputResponse('H')
+                pass
+            elif code == 100:   # CopyData('d')
                 obj.write(data)
-            elif code == PG_COPY_DONE:
-                if DEBUG: DEBUG_OUTPUT("COPY_DONE")
-            elif code == PG_B_COPY_IN_RESPONSE:
-                if DEBUG: DEBUG_OUTPUT("COPY_IN_RESPONSE")
+            elif code == 99:    # CopyDataDone('c')
+                pass
+            elif code == 71:    # CopyInResponse('G')
                 while True:
                     buf = obj.read(8192)
                     if not buf:
@@ -629,7 +596,7 @@ class Connection(object):
                 # send PG_COPY_DONE and PG_F_SYNC
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
-                if DEBUG: DEBUG_OUTPUT("SKIP:%d\t%i\t%s" % (code, ln, binascii.b2a_hex(data)))
+                pass
         return errobj
 
     def process_messages(self, obj):

@@ -27,39 +27,16 @@ cdef int PY2
 cdef int DEBUG
 cdef void DEBUG_OUTPUT(str s)
 
-cdef int PG_B_AUTHENTICATION
-cdef int PG_B_BACKEND_KEY_DATA
 cdef int PG_F_BIND
-cdef int PG_B_BIND_COMPLETE
 cdef int PG_F_CLOSE
-cdef int PG_B_CLOSE_COMPLETE
-cdef int PG_B_COMMAND_COMPLETE
-cdef int PG_COPY_DATA
-cdef int PG_COPY_DONE
 cdef int PG_F_COPY_FALL
-cdef int PG_B_COPY_IN_RESPONSE
-cdef int PG_B_COPY_OUT_RESPONSE
-cdef int PG_B_COPY_BOTH_RESPONSE
-cdef int PG_B_DATA_ROW
 cdef int PG_F_DESCRIBE
-cdef int PG_B_EMPTY_QUERY_RESPONSE
-cdef int PG_B_ERROR_RESPONSE
 cdef int PG_F_EXECUTE
 cdef int PG_F_FLUSH
 cdef int PG_F_FUNCTION_CALL
-cdef int PG_B_FUNCTION_CALL_RESPONSE
-cdef int PG_B_NO_DATA
-cdef int PG_B_NOTICE_RESPONSE
-cdef int PG_B_NOTIFICATION_RESPONSE
-cdef int PG_B_PARAMETER_DESCRIPTION
-cdef int PG_B_PARAMETER_STATUS
 cdef int PG_F_PARSE
-cdef int PG_B_PARSE_COMPLETE
 cdef int PG_F_PASSWORD_MESSAGE
-cdef int PG_B_PORTAL_SUSPEND
 cdef int PG_F_QUERY
-cdef int PG_B_READY_FOR_QUERY
-cdef int PG_B_ROW_DESCRIPTION
 cdef int PG_F_SYNC
 cdef int PG_F_TERMINATE
 
