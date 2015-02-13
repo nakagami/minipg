@@ -238,6 +238,18 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(text, f.getvalue())
         self.connection.commit()
 
+    def test_japanese(self):
+        cur = self.connection.cursor()
+        cur.execute(u"""
+            create temporary table 日本語 (
+              pk        serial,
+              文字列    varchar(255)
+            )
+        """)
+        cur.execute(u"insert into 日本語 (文字列) values ('あいうえお')")
+        cur.execute(u"select 文字列 from 日本語")
+        self.assertEqual(cur.fetchone()[0], u'あいうえお')
+
 if __name__ == "__main__":
     unittest.main()
 
