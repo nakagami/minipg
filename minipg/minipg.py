@@ -217,6 +217,8 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
             dt = dt.replace(tzinfo=TZ(data[n:]))
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
+        if data == '1 day':
+            return datetime.timedelta(days=1)
         dt = data.split('days')
         if len(dt) < 2:
             days = 0
