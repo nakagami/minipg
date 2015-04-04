@@ -346,6 +346,12 @@ class Cursor(object):
         self.arraysize = 1
         self.query = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc, value, traceback):
+        self.close()
+
     def callproc(self, procname, args=()):
         raise NotSupportedError()
 
@@ -448,7 +454,6 @@ class Connection(object):
 
     def __exit__(self, exc, value, traceback):
         self.close()
-
 
     def _send_message(self, message, data):
         self._write(b''.join([
