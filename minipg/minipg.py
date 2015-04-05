@@ -29,6 +29,7 @@ import socket
 import decimal
 import datetime
 import time
+import uuid
 import collections
 import binascii
 
@@ -238,7 +239,9 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
     elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
-    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_UUID, PG_TYPE_TSVECTOR, PG_TYPE_INET):
+    elif oid in (PG_TYPE_UUID, ):
+        return uuid.UUID(data)
+    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
         if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
