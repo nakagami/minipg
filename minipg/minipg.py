@@ -223,15 +223,17 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
         if len(dt) < 2:
             days = 0
             hours, minites, seconds = dt[0].split(':')
-            seconds, microseconds = seconds.split('.')
-            if not microseconds:
+            if seconds.find('.') != -1:
+                seconds, microseconds = seconds.split('.')
+            else:
                 microseconds = 0
         else:
             days = int(dt[0])
             if dt[1]:
                 hours, minites, seconds = dt[1].split(':')
-                seconds, microseconds = seconds.split('.')
-                if not microseconds:
+                if seconds.find('.') != -1:
+                    seconds, microseconds = seconds.split('.')
+                else:
                     microseconds = 0
             else:
                 hours = minites = seconds = microseconds = 0
