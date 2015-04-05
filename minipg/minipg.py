@@ -670,7 +670,10 @@ class Connection(object):
             return "'" + str(v) + "'"
         elif t == datetime.timedelta:
             if v.seconds:
-                return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
+                if v.microseconds:
+                    return u"interval '%d.%06d second'" % (v.days * 86400 + v.seconds, v.microseconds)
+                else:
+                    return u"interval '%d second'" % (v.days * 86400 + v.seconds, )
             else:
                 return u"interval '%d day'" % (v.days, )
         elif t == int or t == float or (PY2 and t == long):
