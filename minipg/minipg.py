@@ -223,17 +223,25 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
         if len(dt) < 2:
             days = 0
             hours, minites, seconds = dt[0].split(':')
+            seconds, microseconds = seconds.split('.')
+            if not microseconds:
+                microseconds = 0
         else:
             days = int(dt[0])
             if dt[1]:
                 hours, minites, seconds = dt[1].split(':')
+                seconds, microseconds = seconds.split('.')
+                if not microseconds:
+                    microseconds = 0
             else:
-                hours = minites = seconds = 0
+                hours = minites = seconds = microseconds = 0
 
         hours = int(hours)
         minites = int(minites)
         seconds = int(seconds)
-        return datetime.timedelta(seconds=seconds, minutes=minites, hours=hours, days=days)
+        microseconds = int(microseconds)
+        return datetime.timedelta(microseconds=microseconds,
+            seconds=seconds, minutes=minites, hours=hours, days=days)
     elif oid in (PG_TYPE_BYTEA, ):
         assert data[:2] == u'\\x'
         hex_str = data[2:]
