@@ -387,9 +387,11 @@ class Cursor(object):
         self.args = args
         if args:
             escaped_args = tuple(
-                self.connection.escape_parameter(arg) for arg in args
+                self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args
             )
+            query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
             query = query % escaped_args
+            query = query.replace(u'%%', u'%')
         self.query = query
         self.connection.execute(query, self)
 
