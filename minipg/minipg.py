@@ -678,7 +678,7 @@ class Connection(object):
         elif t == datetime.datetime:
             return "'" + str(v) + "'"
         elif t == datetime.date:
-            return "'" + str(v) + "'"
+            return "date '" + str(v) + "'"
         elif t == datetime.timedelta:
             if v.seconds:
                 if v.microseconds:
@@ -690,7 +690,7 @@ class Connection(object):
         elif t == int or t == float or (PY2 and t == long):
             return str(v)
         elif t == decimal.Decimal:
-            return "'" + str(v) + "'"
+            return "decimal '" + str(v) + "'"
         elif t == list or t == tuple:
             return u'ARRAY[' + u','.join([self.escape_parameter(e) for e in v]) + u']'
         else:
