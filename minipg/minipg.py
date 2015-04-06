@@ -249,7 +249,8 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
         hex_str = data[2:]
         ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
-    elif oid in (PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
+    elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR,
+        PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
     elif oid in (PG_TYPE_UUID, ):
         return uuid.UUID(data)
