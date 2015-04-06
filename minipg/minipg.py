@@ -676,7 +676,7 @@ class Connection(object):
             return u'%04d-%02d-%02d %02d:%02d:%02d' % (
                 v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
         elif t == datetime.datetime:
-            return "timestamp '" + str(v) + "'"
+            return "'" + str(v) + "'"
         elif t == datetime.date:
             return "date '" + str(v) + "'"
         elif t == datetime.timedelta:
