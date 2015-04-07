@@ -159,7 +159,9 @@ class TZ(datetime.tzinfo):
     def tzname(self, dt):
         return u"UTC" + self.offset
 
-def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
+utc_tzinfo = TZ()
+
+def _decode_column(data, oid, encoding, tzinfo):
     if data is None:
         return data
     data = data.decode(encoding)
@@ -201,7 +203,7 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
             dt = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        if use_tzinfo:
+        if tzinfo:
             dt = dt.replace(tzinfo=TZ(data[n:]))
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
@@ -213,7 +215,7 @@ def _decode_column(data, oid, encoding, tzinfo, use_tzinfo):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        if use_tzinfo:
+        if tzinfo:
             dt = dt.replace(tzinfo=TZ(data[n:]))
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
@@ -461,7 +463,6 @@ class Connection(object):
         self.encoding = 'UTF8'
         self.autocommit = False
         self._ready_for_query = b'I'
-        self.use_tzinfo = True
         self._open()
         self.encoders = {}
 
@@ -571,7 +572,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo, self.use_tzinfo)
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                 obj._rows.append(tuple(row))
             elif code == 78:    # NoticeResponse('N')
                 pass
@@ -676,7 +677,14 @@ class Connection(object):
             return u'%04d-%02d-%02d %02d:%02d:%02d' % (
                 v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
         elif t == datetime.datetime:
-            return "'" + v.isoformat() + "'"
+            if self.tzinfo and v.tzinfo is None:
+                v = v.replace(tzinfo=self.tzinfo)
+            elif not self.tzinfo:
+                v = v.replace(tzinfo=None)
+            if v.tzinfo:
+                return "timestamp with time zone '" + v.isoformat() + "'"
+            else:
+                return "timestamp '" + v.isoformat() + "'"
         elif t == datetime.date:
             return "date '" + str(v) + "'"
         elif t == datetime.timedelta:
