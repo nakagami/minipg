@@ -136,31 +136,6 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
-class TZ(datetime.tzinfo):
-    def __init__(self, offset='+00'):
-        self.offset = offset
-        hours = int(self.offset[:3])
-        if len(offset) > 3:
-            minutes = int(self.offset[4:6])
-        else:
-            minutes = 0
-        if len(offset) > 6:
-            seconds = int(self.offset[7:])
-        else:
-            seconds = 0
-        self.delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
-
-    def utcoffset(self, dt):
-        return self.delta
-
-    def dst(self, dt):
-        return self.delta
-
-    def tzname(self, dt):
-        return u"UTC" + self.offset
-
-utc_tzinfo = TZ()
-
 def _decode_column(data, oid, encoding, tzinfo):
     if data is None:
         return data
@@ -204,7 +179,7 @@ def _decode_column(data, oid, encoding, tzinfo):
         else:
             dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
         if tzinfo:
-            dt = dt.replace(tzinfo=TZ(data[n:]))
+            dt = dt.replace(tzinfo=tzinfo)
         return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
         n = data.rfind('+')
@@ -216,7 +191,7 @@ def _decode_column(data, oid, encoding, tzinfo):
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
         if tzinfo:
-            dt = dt.replace(tzinfo=TZ(data[n:]))
+            dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         if data == '1 day':
@@ -451,13 +426,12 @@ class Cursor(object):
         return self.__next__()
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, tzinfo, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, timeout, use_ssl):
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
-        self.tzinfo = tzinfo
         self.timeout = timeout
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
@@ -465,6 +439,7 @@ class Connection(object):
         self._ready_for_query = b'I'
         self._open()
         self.encoders = {}
+        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -679,8 +654,6 @@ class Connection(object):
         elif t == datetime.datetime:
             if self.tzinfo and v.tzinfo is None:
                 v = v.replace(tzinfo=self.tzinfo)
-            elif not self.tzinfo:
-                v = v.replace(tzinfo=None)
             if v.tzinfo:
                 return "timestamp with time zone '" + v.isoformat() + "'"
             else:
@@ -760,6 +733,6 @@ class Connection(object):
             self.sock.close()
             self.sock = None
 
-def connect(host, user, password='', database=None, port=5432, tzinfo=None, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port, tzinfo, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
+    return Connection(user, password, database, host, port, timeout, use_ssl)
 
