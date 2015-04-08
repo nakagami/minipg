@@ -289,7 +289,14 @@ DATE = DBAPITypeObject(datetime.date)
 TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
 
-class Error(Exception):
+if PY2:
+    class MiniPGError(StandardError):
+        pass
+else:
+    class MiniPGError(Exception):
+        pass
+
+class Error(MiniPGError):
     def __init__(self, *args):
         if len(args) > 0:
             self.message = args[0]
@@ -300,6 +307,9 @@ class Error(Exception):
         return self.message
     def __repr__(self):
         return self.message
+
+class Warning(MiniPGError):
+    pass
 
 class InterfaceError(Error):
     pass
