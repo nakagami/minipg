@@ -344,6 +344,7 @@ class Cursor(object):
         self._rowcount = 0
         self.arraysize = 1
         self.query = None
+        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -445,7 +446,6 @@ class Connection(object):
         self._ready_for_query = b'I'
         self._open()
         self.encoders = {}
-        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -553,7 +553,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, obj.tzinfo)
                 obj._rows.append(tuple(row))
             elif code == 78:    # NoticeResponse('N')
                 pass
@@ -658,8 +658,6 @@ class Connection(object):
             return u'%04d-%02d-%02d %02d:%02d:%02d' % (
                 v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
         elif t == datetime.datetime:
-            if self.tzinfo and v.tzinfo is None:
-                v = v.replace(tzinfo=self.tzinfo)
             if v.tzinfo:
                 return "timestamp with time zone '" + v.isoformat() + "'"
             else:
