@@ -112,7 +112,7 @@ cdef int PG_TYPE_ANYENUM
 cdef int PG_TYPE_FDW_HANDLER
 cdef int PG_TYPE_ANYRANGE
 
-cdef object _decode_column(data, int oid, encoding, tzinfo, use_tzinfo)
+cdef object _decode_column(data, int oid, encoding, tzinfo)
 
 @cython.locals(r=cython.longlong)
 cdef long long _bytes_to_bint(bytes b)
@@ -123,7 +123,7 @@ cdef bytes _bint_to_bytes(int val)
 cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, sock
     cdef _ready_for_query
-    cdef public object encoding, encoders, autocommit, tzinfo, use_tzinfo
+    cdef public object encoding, encoders, autocommit, tzinfo
 
     @cython.locals(t=cython.type)
     cpdef escape_parameter(Connection self, object v)
