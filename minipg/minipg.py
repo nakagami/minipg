@@ -33,7 +33,7 @@ import uuid
 import collections
 import binascii
 
-VERSION = (0, 4, 5)
+VERSION = (0, 5, 0)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
