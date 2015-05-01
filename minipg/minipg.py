@@ -32,6 +32,7 @@ import time
 import uuid
 import collections
 import binascii
+from argparse import ArgumentParser
 
 VERSION = (0, 5, 0)
 __version__ = '%s.%s.%s' % VERSION
@@ -734,3 +735,28 @@ class Connection(object):
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
+def main():
+    parser = ArgumentParser(description='Execute query and get result.')
+    parser.add_argument('-H', '--host', default='localhost',
+        metavar='host', type=str, help='host name')
+    parser.add_argument('-U', '--user', required=True,
+        metavar='user', type=str, help='login user')
+    parser.add_argument('-W', '--password', default='',
+        metavar='password', type=str, help='login password')
+    parser.add_argument('-P', '--port', default=5432,
+        metavar='port', type=int, help='port number')
+    parser.add_argument('-D', '--database',
+        metavar='database', type=str, help='database name')
+    parser.add_argument('-Q', '--query',
+        metavar='query', type=str, help='query string')
+    args = parser.parse_args()
+    if args.query is None:
+        args.query = sys.stdin.read()
+
+    conn = connect(args.host, args.user, args.password, args.database, args.port)
+    cur = conn.cursor()
+    cur.execute(args.query)
+    conn.commit()
+
+if __name__ == '__main__':
+    main()
