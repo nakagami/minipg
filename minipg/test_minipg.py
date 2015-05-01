@@ -41,6 +41,7 @@ class TestMiniPG(unittest.TestCase):
                             user=self.user,
                             password=self.password,
                             database=self.database)
+        self.maxDiff = None
     def tearDown(self):
         self.connection.close()
 
