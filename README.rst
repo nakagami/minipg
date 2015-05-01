@@ -71,6 +71,21 @@ COPY FROM::
    f.close()
    conn.close()
 
+Execute Query with command line
+--------------------------------
+
+::
+
+   $ python -m minipg -H pg_server -U user -W pass -D db_name <<EOS
+   > SELECT * FROM FOO
+   > EOS
+
+or
+
+::
+
+   $ python -m minipg -H pg_server -U user -W pass -D db_name -Q 'SELECT * FROM FOO
+
 
 Restrictions and Unsupported Features
 --------------------------------------
