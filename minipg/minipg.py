@@ -735,7 +735,7 @@ class Connection(object):
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
-def output_results(file, conn, query, separator="\t"):
+def output_results(conn, query, separator="\t", file=sys.stdout):
     def _ustr(c):
         if PY2:
             if not isinstance(c, unicode):
@@ -772,7 +772,7 @@ def main(file):
         args.query = sys.stdin.read()
 
     conn = connect(args.host, args.user, args.password, args.database, args.port)
-    output_results(file, conn, args.query, args.separator)
+    output_results(conn, args.query, args.separator, file)
 
     conn.commit()
 
