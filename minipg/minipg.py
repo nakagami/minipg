@@ -735,23 +735,21 @@ class Connection(object):
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
-def _ustr(c):
-    if PY2:
-        if not isinstance(c, unicode):
-            c = unicode(c)
-        c = c.encode('utf-8')
-    else:
-        if not isinstance(c, str):
-            c = str(c)
-    return c
+def output_results(file, conn, query):
+    def _ustr(c):
+        if PY2:
+            if not isinstance(c, unicode):
+                c = unicode(c)
+        else:
+            if not isinstance(c, str):
+                c = str(c)
+        return c
 
-def _output_results(file, conn, query):
     cur = conn.cursor()
     cur.execute(query)
-
     print('\t'.join([_ustr(d[0]) for d in cur.description]), file=file)
     for r in cur.fetchall():
-        print('\t'.join([_ustr(c) for c in r]), file=file)
+        print(u'\t'.join([_ustr(c) for c in r]), file=file)
 
 def main(file):
     parser = ArgumentParser(description='Execute query and get result.')
@@ -772,7 +770,7 @@ def main(file):
         args.query = sys.stdin.read()
 
     conn = connect(args.host, args.user, args.password, args.database, args.port)
-    _output_results(file, conn, args.query)
+    output_results(file, conn, args.query)
 
     conn.commit()
 
