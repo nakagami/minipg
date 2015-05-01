@@ -1,2 +1,3 @@
+import sys
 from .minipg import main
-main()
+main(sys.stdout)
