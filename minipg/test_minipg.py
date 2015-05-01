@@ -94,11 +94,11 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(len(cur.fetchall()), 3)
 
         f = io.StringIO()
-        minipg.output_results(f, self.connection, "select * from test_basic", separator=u'|')
-        text = u"""pk|b1|i2|i4|i8|dec|dbl|s|dt|t1|t2|t3|t4
-1|True|1|2|3|1.100|2.1|あいうえお|2001-01-01|04:05:06.789000|04:05:06.789000|2003-04-12 04:05:06.789000|2003-04-12 04:05:06.789000
-2|False|2|3|None|1.200|2.2|かきくけこ|2001-01-02|04:05:06|04:05:06|2003-04-12 04:05:06|2003-04-12 21:05:06
-3|False|3|4|5|1.300|2.3|ABC's|2001-01-03|04:05:06|04:05:06|2003-04-12 04:05:06|2003-04-12 17:05:06
+        minipg.output_results(f, self.connection, "select i8,dec,dbl,s,dt from test_basic", separator=u'|')
+        text = u"""i8|dec|dbl|s|dt
+3|1.100|2.1|あいうえお|2001-01-01
+None|1.200|2.2|かきくけこ|2001-01-02
+5|1.300|2.3|ABC's|2001-01-03
 """
         self.assertEqual(text, f.getvalue())
 
