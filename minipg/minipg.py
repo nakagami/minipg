@@ -735,7 +735,7 @@ class Connection(object):
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
-def output_results(file, conn, query):
+def output_results(file, conn, query, separator="\t"):
     def _ustr(c):
         if PY2:
             if not isinstance(c, unicode):
@@ -747,9 +747,9 @@ def output_results(file, conn, query):
 
     cur = conn.cursor()
     cur.execute(query)
-    print('\t'.join([_ustr(d[0]) for d in cur.description]), file=file)
+    print(separator.join([_ustr(d[0]) for d in cur.description]), file=file)
     for r in cur.fetchall():
-        print(u'\t'.join([_ustr(c) for c in r]), file=file)
+        print(separator.join([_ustr(c) for c in r]), file=file)
 
 def main(file):
     parser = ArgumentParser(description='Execute query and get result.')
@@ -765,12 +765,14 @@ def main(file):
         metavar='database', type=str, help='database name')
     parser.add_argument('-Q', '--query',
         metavar='query', type=str, help='query string')
+    parser.add_argument('-F', '--field-separator', default="\t",
+        metavar='separator', type=str, help='field separator')
     args = parser.parse_args()
     if args.query is None:
         args.query = sys.stdin.read()
 
     conn = connect(args.host, args.user, args.password, args.database, args.port)
-    output_results(file, conn, args.query)
+    output_results(file, conn, args.query, args.separator)
 
     conn.commit()
 
