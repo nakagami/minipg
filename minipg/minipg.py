@@ -34,7 +34,7 @@ import collections
 import binascii
 from argparse import ArgumentParser
 
-VERSION = (0, 5, 1)
+VERSION = (0, 5, 2)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
