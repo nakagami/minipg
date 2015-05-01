@@ -736,6 +736,15 @@ def connect(host, user, password='', database=None, port=5432, timeout=None, use
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
 def main():
+    def _ustr(c):
+        if PY2:
+            if not isinstance(c, unicode):
+                c = unicode(c)
+            c = c.encode('utf-8')
+        else:
+            if not isinstance(c, str):
+                c = str(c)
+        return c
     parser = ArgumentParser(description='Execute query and get result.')
     parser.add_argument('-H', '--host', default='localhost',
         metavar='host', type=str, help='host name')
@@ -756,6 +765,11 @@ def main():
     conn = connect(args.host, args.user, args.password, args.database, args.port)
     cur = conn.cursor()
     cur.execute(args.query)
+
+    print('\t'.join([_ustr(d[0]) for d in cur.description]))
+    for r in cur.fetchall():
+        print('\t'.join([_ustr(c) for c in r]))
+
     conn.commit()
 
 if __name__ == '__main__':
