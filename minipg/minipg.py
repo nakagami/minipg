@@ -735,7 +735,7 @@ class Connection(object):
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
 
-def output_results(conn, query, separator="\t", file=sys.stdout):
+def output_results(conn, query, with_header=True, separator="\t", file=sys.stdout):
     def _ustr(c):
         if PY2:
             if not isinstance(c, unicode):
@@ -747,7 +747,8 @@ def output_results(conn, query, separator="\t", file=sys.stdout):
 
     cur = conn.cursor()
     cur.execute(query)
-    print(separator.join([_ustr(d[0]) for d in cur.description]), file=file)
+    if with_header:
+        print(separator.join([_ustr(d[0]) for d in cur.description]), file=file)
     for r in cur.fetchall():
         print(separator.join([_ustr(c) for c in r]), file=file)
 
@@ -766,13 +767,17 @@ def main(file):
     parser.add_argument('-Q', '--query',
         metavar='query', type=str, help='query string')
     parser.add_argument('-F', '--field-separator', default="\t",
-        metavar='separator', type=str, help='field separator')
+        metavar='field_separator', type=str, help='field separator')
+    parser.add_argument('--header', action='store_true', dest='with_header', help='Output header')
+    parser.add_argument('--no-header', action='store_false', dest='with_header', help='No output header')
+    parser.set_defaults(with_header=True)
+
     args = parser.parse_args()
     if args.query is None:
         args.query = sys.stdin.read()
 
     conn = connect(args.host, args.user, args.password, args.database, args.port)
-    output_results(conn, args.query, args.separator, file)
+    output_results(conn, args.query, args.with_header, args.field_separator, file)
 
     conn.commit()
 
