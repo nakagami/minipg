@@ -71,8 +71,8 @@ COPY FROM::
    f.close()
    conn.close()
 
-Execute Query with command line
---------------------------------
+Execute Query from a command line
+-----------------------------------
 
 ::
 
@@ -84,7 +84,7 @@ or
 
 ::
 
-   $ python -m minipg -H pg_server -U user -W pass -D db_name -Q 'SELECT * FROM FOO
+   $ python -m minipg -H pg_server -U user -W pass -D db_name -Q 'SELECT * FROM FOO'
 
 
 Restrictions and Unsupported Features
