@@ -739,6 +739,10 @@ def output_results(conn, query, with_header=True, separator="\t", null='null', f
     def _ustr(c):
         if c is None:
             return null
+        elif c is True:
+            return 'true'
+        elif c is False:
+            return 'false'
         if PY2:
             if not isinstance(c, unicode):
                 c = unicode(c)
