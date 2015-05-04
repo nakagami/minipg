@@ -96,7 +96,7 @@ class TestMiniPG(unittest.TestCase):
         minipg.output_results(self.connection, "select i8,dec,dbl,s,dt from test_basic", separator=u'|', file=f)
         text = u"""i8|dec|dbl|s|dt
 3|1.100|2.1|あいうえお|2001-01-01
-None|1.200|2.2|かきくけこ|2001-01-02
+null|1.200|2.2|かきくけこ|2001-01-02
 5|1.300|2.3|ABC's|2001-01-03
 """
         self.assertEqual(text, f.getvalue())
