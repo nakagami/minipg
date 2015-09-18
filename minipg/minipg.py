@@ -151,6 +151,17 @@ class UTC(datetime.tzinfo):
 
 
 def _decode_column(data, oid, encoding, tzinfo):
+    def _get_timezone_offset(data):
+        n = data.rfind('+')
+        if n == -1:
+            n = data.rfind('-')
+            s = data[:n]
+            offset = int(data[n:]) * 3600 * -1
+        else:
+            s = data[:n]
+            offset = int(data[n:]) * 3600
+        return s, offset
+
     if data is None:
         return data
     data = data.decode(encoding)
@@ -183,11 +194,7 @@ def _decode_column(data, oid, encoding, tzinfo):
             dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_TIMETZ, ):
-        n = data.rfind('+')
-        if n == -1:
-            n = data.rfind('-')
-        s = data[:n]
-        offset = int(data[n:])
+        s, offset = _get_timezone_offset(data)
         if tzinfo is None:
             tzinfo = UTC()
         if len(s) == 8:
@@ -197,11 +204,7 @@ def _decode_column(data, oid, encoding, tzinfo):
         t = t.replace(tzinfo=tzinfo)
         return t
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
-        n = data.rfind('+')
-        if n == -1:
-            n = data.rfind('-')
-        s = data[:n]
-        offset = int(data[n:])
+        s, offset = _get_timezone_offset(data)
         if tzinfo is None:
             tzinfo = UTC()
         if len(s) == 19:
