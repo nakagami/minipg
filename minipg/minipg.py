@@ -44,6 +44,7 @@ PY2 = sys.version_info[0] == 2
 
 DEBUG = False
 
+
 def DEBUG_OUTPUT(s):
     print(s, end=' \n', file=sys.stderr)
 
@@ -137,6 +138,7 @@ PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
+
 def _decode_column(data, oid, encoding, tzinfo):
     if data is None:
         return data
@@ -220,20 +222,19 @@ def _decode_column(data, oid, encoding, tzinfo):
         minites = int(minites)
         seconds = int(seconds)
         microseconds = int(microseconds)
-        return datetime.timedelta(microseconds=microseconds,
-            seconds=seconds, minutes=minites, hours=hours, days=days)
+        return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
     elif oid in (PG_TYPE_BYTEA, ):
         assert data[:2] == u'\\x'
         hex_str = data[2:]
         ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
         return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
-    elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR,
-        PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
+    elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
         return data
     elif oid in (PG_TYPE_UUID, ):
         return uuid.UUID(data)
     elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
-        if DEBUG: DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
+        if DEBUG:
+            DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
@@ -250,6 +251,7 @@ def _decode_column(data, oid, encoding, tzinfo):
 
 # ----------------------------------------------------------------------------
 
+
 def _bytes_to_bint(b):     # Read as big endian
     if PY2:
         r = 0
@@ -258,6 +260,7 @@ def _bytes_to_bint(b):     # Read as big endian
         return r
     else:
         return int.from_bytes(b, byteorder='big')
+
 
 def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     if PY2:
@@ -269,19 +272,25 @@ Date = datetime.date
 Time = datetime.time
 TimeDelta = datetime.timedelta
 Timestamp = datetime.datetime
+
+
 def Binary(b):
     return bytearray(b)
 
+
 class DBAPITypeObject:
-    def __init__(self,*values):
+    def __init__(self, *values):
         self.values = values
-    def __cmp__(self,other):
+
+    def __cmp__(self, other):
         if other in self.values:
             return 0
         if other < self.values:
             return 1
         else:
             return -1
+
+
 STRING = DBAPITypeObject(str)
 BINARY = DBAPITypeObject(bytes)
 NUMBER = DBAPITypeObject(int, decimal.Decimal)
@@ -290,8 +299,10 @@ DATE = DBAPITypeObject(datetime.date)
 TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
 
+
 if not PY2:
     StandardError = Exception
+
 
 class Error(StandardError):
     def __init__(self, *args):
@@ -300,42 +311,55 @@ class Error(StandardError):
         else:
             self.message = b'Database Error'
         super(Error, self).__init__(*args)
+
     def __str__(self):
         return self.message
+
     def __repr__(self):
         return self.message
+
 
 class Warning(StandardError):
     pass
 
+
 class InterfaceError(Error):
     pass
+
 
 class DatabaseError(Error):
     pass
 
+
 class DisconnectByPeer(Warning):
     pass
+
 
 class InternalError(DatabaseError):
     def __init__(self):
         DatabaseError.__init__(self, 'InternalError')
 
+
 class OperationalError(DatabaseError):
     pass
+
 
 class ProgrammingError(DatabaseError):
     pass
 
+
 class IntegrityError(DatabaseError):
     pass
+
 
 class DataError(DatabaseError):
     pass
 
+
 class NotSupportedError(DatabaseError):
     def __init__(self):
         DatabaseError.__init__(self, 'NotSupportedError')
+
 
 class Cursor(object):
     def __init__(self, connection):
@@ -362,7 +386,7 @@ class Cursor(object):
     def setinputsizes(sizes):
         pass
 
-    def setoutputsize(size,column=None):
+    def setoutputsize(size, column=None):
         pass
 
     def execute(self, query, args=()):
@@ -420,7 +444,6 @@ class Cursor(object):
     def closed(self):
         return self.connection is None or not self.connection.is_connect()
 
-
     def __iter__(self):
         return self
 
@@ -432,6 +455,7 @@ class Cursor(object):
 
     def next(self):
         return self.__next__()
+
 
 class Connection(object):
     def __init__(self, user, password, database, host, port, timeout, use_ssl):
@@ -455,13 +479,7 @@ class Connection(object):
         self.close()
 
     def _send_message(self, message, data):
-        self._write(b''.join([
-                message,
-                _bint_to_bytes(len(data) + 4),
-                data,
-                b'H\x00\x00\x00\x04',   # Flush
-            ])
-        )
+        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
     def _process_messages(self, obj):
         errobj = None
@@ -483,7 +501,7 @@ class Connection(object):
                     salt = data[4:]
                     hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
-                    self._send_message(b'p', b''.join([b'md5',hash2,'\x00']))
+                    self._send_message(b'p', b''.join([b'md5', hash2, '\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
             elif code == 83:    # ParamterStatus('S')
@@ -558,7 +576,7 @@ class Connection(object):
                 obj._rows.append(tuple(row))
             elif code == 78:    # NoticeResponse('N')
                 pass
-            elif code == 69 and not errobj: # ErrorResponse('E')
+            elif code == 69 and not errobj:     # ErrorResponse('E')
                 err = data.split(b'\x00')
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[1][1:]
@@ -618,7 +636,8 @@ class Connection(object):
     def _open(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.host, self.port))
-        if DEBUG: DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
+        if DEBUG:
+            DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
             import ssl
             self._write(_bint_to_bytes(8))
@@ -687,7 +706,8 @@ class Connection(object):
         return Cursor(self)
 
     def _execute(self, query, obj):
-        if DEBUG: DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
+        if DEBUG:
+            DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
@@ -702,21 +722,24 @@ class Connection(object):
         self.autocommit = autocommit
 
     def begin(self):
-        if DEBUG: DEBUG_OUTPUT('BEGIN')
+        if DEBUG:
+            DEBUG_OUTPUT('BEGIN')
         if self._ready_for_query == b'E':
             self.rollback()
         self._send_message(b'Q', b"BEGIN\x00")
         self._process_messages(None)
 
     def commit(self):
-        if DEBUG: DEBUG_OUTPUT('COMMIT')
+        if DEBUG:
+            DEBUG_OUTPUT('COMMIT')
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
 
     def rollback(self):
         if self.sock:
-            if DEBUG: DEBUG_OUTPUT('ROLLBACK')
+            if DEBUG:
+                DEBUG_OUTPUT('ROLLBACK')
             self._send_message(b'Q', b"ROLLBACK\x00")
         self.process_messages(None)
 
@@ -725,15 +748,18 @@ class Connection(object):
         self._open()
 
     def close(self):
-        if DEBUG: DEBUG_OUTPUT('Connection::close()')
+        if DEBUG:
+            DEBUG_OUTPUT('Connection::close()')
         if self.sock:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
 
+
 def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
     return Connection(user, password, database, host, port, timeout, use_ssl)
+
 
 def output_results(conn, query, with_header=True, separator="\t", null='null', file=sys.stdout):
     def _ustr(c):
@@ -758,26 +784,19 @@ def output_results(conn, query, with_header=True, separator="\t", null='null', f
     for r in cur.fetchall():
         print(separator.join([_ustr(c) for c in r]), file=file)
 
+
 def main(file):
     parser = ArgumentParser(description='Execute query and print results.')
-    parser.add_argument('-H', '--host', default='localhost',
-        metavar='host', type=str, help='host name')
-    parser.add_argument('-U', '--user', required=True,
-        metavar='user', type=str, help='login user')
-    parser.add_argument('-W', '--password', default='',
-        metavar='password', type=str, help='login password')
-    parser.add_argument('-P', '--port', default=5432,
-        metavar='port', type=int, help='port number')
-    parser.add_argument('-D', '--database',
-        metavar='database', type=str, help='database name')
-    parser.add_argument('-Q', '--query',
-        metavar='query', type=str, help='query string')
-    parser.add_argument('-F', '--field-separator', default="\t",
-        metavar='field_separator', type=str, help='field separator')
+    parser.add_argument('-H', '--host', default='localhost', metavar='host', type=str, help='host name')
+    parser.add_argument('-U', '--user', required=True, metavar='user', type=str, help='login user')
+    parser.add_argument('-W', '--password', default='', metavar='password', type=str, help='login password')
+    parser.add_argument('-P', '--port', default=5432, metavar='port', type=int, help='port number')
+    parser.add_argument('-D', '--database', metavar='database', type=str, help='database name')
+    parser.add_argument('-Q', '--query', metavar='query', type=str, help='query string')
+    parser.add_argument('-F', '--field-separator', default="\t", metavar='field_separator', type=str, help='field separator')
     parser.add_argument('--header', action='store_true', dest='with_header', help='Output header')
     parser.add_argument('--no-header', action='store_false', dest='with_header', help='No output header')
-    parser.add_argument('--null', default='null',
-        metavar='null', type=str, help='null value replacement string')
+    parser.add_argument('--null', default='null', metavar='null', type=str, help='null value replacement string')
 
     parser.set_defaults(with_header=True)
 
