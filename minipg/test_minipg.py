@@ -29,18 +29,20 @@ import decimal
 import datetime
 import minipg
 
+
 class TestMiniPG(unittest.TestCase):
-    host='localhost'
-    user='postgres'
-    password=''
-    database='test_minipg'
+    host = 'localhost'
+    user = 'postgres'
+    password = ''
+    database = 'test_minipg'
 
     def setUp(self):
         self.connection = minipg.connect(
-                            host=self.host,
-                            user=self.user,
-                            password=self.password,
-                            database=self.database)
+            host=self.host,
+            user=self.user,
+            password=self.password,
+            database=self.database)
+
     def tearDown(self):
         self.connection.close()
 
@@ -86,7 +88,7 @@ class TestMiniPG(unittest.TestCase):
         self.assertEqual(cur.fetchone()[0], 2)
         cur.execute("select i2 from test_basic where dec=%s", (decimal.Decimal("1.1"),))
         self.assertEqual(cur.fetchone()[0], 1)
-        cur.execute("select count(*) from test_basic where dt=%s", (datetime.date(2001,1,1),))
+        cur.execute("select count(*) from test_basic where dt=%s", (datetime.date(2001, 1, 1),))
         self.assertEqual(cur.fetchone()[0], 1)
 
         cur.execute("select to_json(test_basic) from test_basic")
@@ -264,4 +266,3 @@ false|5|1.300|2.3|ABC's|2001-01-03
 
 if __name__ == "__main__":
     unittest.main()
-
