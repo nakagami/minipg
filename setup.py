@@ -10,8 +10,9 @@ try:
 except ImportError:
     ext_modules = None
 
+
 class TestCommand(Command):
-    user_options = [ ]
+    user_options = []
 
     def initialize_options(self):
         pass
@@ -39,16 +40,16 @@ classifiers = [
 ]
 
 setup(
-    name = "minipg",
-    version = version,
-    url = 'https://github.com/nakagami/minipg/',
+    name="minipg",
+    version=version,
+    url='https://github.com/nakagami/minipg/',
     classifiers=classifiers,
     keywords=['PostgreSQL'],
-    author = 'Hajime Nakagami',
-    author_email = 'nakagami@gmail.com',
-    description = 'Yet another PostgreSQL database driver',
-    license = "MIT",
-    packages = ['minipg'],
-    cmdclass = cmdclass,
-    ext_modules = ext_modules,
+    author='Hajime Nakagami',
+    author_email='nakagami@gmail.com',
+    description='Yet another PostgreSQL database driver',
+    license="MIT",
+    packages=['minipg'],
+    cmdclass=cmdclass,
+    ext_modules=ext_modules,
 )
