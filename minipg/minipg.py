@@ -34,7 +34,7 @@ import collections
 import binascii
 from argparse import ArgumentParser
 
-VERSION = (0, 5, 3)
+VERSION = (0, 6, 0)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
@@ -139,6 +139,17 @@ PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
 
+class UTC(datetime.tzinfo):
+    def utcoffset(self, dt):
+        return datetime.timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return datetime.timedelta(0)
+
+
 def _decode_column(data, oid, encoding, tzinfo):
     if data is None:
         return data
@@ -177,24 +188,27 @@ def _decode_column(data, oid, encoding, tzinfo):
             n = data.rfind('-')
         s = data[:n]
         offset = int(data[n:])
+        if tzinfo is None:
+            tzinfo = UTC()
         if len(s) == 8:
-            dt = datetime.datetime.strptime(s, '%H:%M:%S')
+            t = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
-            dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
-        return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
+            t = datetime.datetime.strptime(s, '%H:%M:%S.%f')
+        t = t.replace(tzinfo=tzinfo)
+        return t
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
         n = data.rfind('+')
         if n == -1:
             n = data.rfind('-')
         s = data[:n]
+        offset = int(data[n:])
+        if tzinfo is None:
+            tzinfo = UTC()
         if len(s) == 19:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
+        dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         if data == '1 day':
