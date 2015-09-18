@@ -369,7 +369,6 @@ class Cursor(object):
         self._rowcount = 0
         self.arraysize = 1
         self.query = None
-        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -458,7 +457,7 @@ class Cursor(object):
 
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, timeout, use_ssl, tzinfo):
         self.user = user
         self.password = password
         self.database = database
@@ -466,6 +465,7 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.use_ssl = use_ssl
+        self.tzinfo = tzinfo
         self.encoding = 'UTF8'
         self.autocommit = False
         self._ready_for_query = b'I'
@@ -572,7 +572,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, obj.tzinfo)
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                 obj._rows.append(tuple(row))
             elif code == 78:    # NoticeResponse('N')
                 pass
@@ -757,8 +757,8 @@ class Connection(object):
             self.sock = None
 
 
-def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False, tzinfo=None):
+    return Connection(user, password, database, host, port, timeout, use_ssl, tzinfo)
 
 
 def output_results(conn, query, with_header=True, separator="\t", null='null', file=sys.stdout):
