@@ -160,7 +160,7 @@ def _decode_column(data, oid, encoding, tzinfo):
         else:
             s = data[:n]
             offset = int(data[n:]) * 3600
-        return s, offset
+        return s, datetime.timedelta(seconds=offset)
 
     if data is None:
         return data
@@ -201,6 +201,7 @@ def _decode_column(data, oid, encoding, tzinfo):
             t = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
             t = datetime.datetime.strptime(s, '%H:%M:%S.%f')
+        t += tzinfo.utcoffset(t) - offset
         t = t.replace(tzinfo=tzinfo)
         return t
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
@@ -211,6 +212,7 @@ def _decode_column(data, oid, encoding, tzinfo):
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
+        dt += tzinfo.utcoffset(dt) - offset
         dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
