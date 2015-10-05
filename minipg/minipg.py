@@ -34,7 +34,7 @@ import collections
 import binascii
 from argparse import ArgumentParser
 
-VERSION = (0, 5, 3)
+VERSION = (0, 5, 4)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
@@ -139,7 +139,29 @@ PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
 
+class UTC(datetime.tzinfo):
+    def utcoffset(self, dt):
+        return datetime.timedelta(0)
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return datetime.timedelta(0)
+
+
 def _decode_column(data, oid, encoding, tzinfo):
+    def _get_timezone_offset(data):
+        n = data.rfind('+')
+        if n == -1:
+            n = data.rfind('-')
+            s = data[:n]
+            offset = int(data[n:]) * 3600 * -1
+        else:
+            s = data[:n]
+            offset = int(data[n:]) * 3600
+        return s, datetime.timedelta(seconds=offset)
+
     if data is None:
         return data
     data = data.decode(encoding)
@@ -172,29 +194,26 @@ def _decode_column(data, oid, encoding, tzinfo):
             dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_TIMETZ, ):
-        n = data.rfind('+')
-        if n == -1:
-            n = data.rfind('-')
-        s = data[:n]
-        offset = int(data[n:])
+        s, offset = _get_timezone_offset(data)
+        if tzinfo is None:
+            tzinfo = UTC()
         if len(s) == 8:
-            dt = datetime.datetime.strptime(s, '%H:%M:%S')
+            t = datetime.datetime.strptime(s, '%H:%M:%S')
         else:
-            dt = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
-        return datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond, tzinfo=dt.tzinfo)
+            t = datetime.datetime.strptime(s, '%H:%M:%S.%f')
+        t += tzinfo.utcoffset(t) - offset
+        t = t.replace(tzinfo=tzinfo)
+        return t
     elif oid in (PG_TYPE_TIMESTAMPTZ, ):
-        n = data.rfind('+')
-        if n == -1:
-            n = data.rfind('-')
-        s = data[:n]
+        s, offset = _get_timezone_offset(data)
+        if tzinfo is None:
+            tzinfo = UTC()
         if len(s) == 19:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
         else:
             dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
+        dt += tzinfo.utcoffset(dt) - offset
+        dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
         if data == '1 day':
@@ -369,7 +388,6 @@ class Cursor(object):
         self._rowcount = 0
         self.arraysize = 1
         self.query = None
-        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -458,7 +476,7 @@ class Cursor(object):
 
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, timeout, use_ssl, tzinfo):
         self.user = user
         self.password = password
         self.database = database
@@ -466,6 +484,7 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.use_ssl = use_ssl
+        self.tzinfo = tzinfo
         self.encoding = 'UTF8'
         self.autocommit = False
         self._ready_for_query = b'I'
@@ -576,7 +595,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, obj.tzinfo)
+                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                 obj._rows.append(tuple(row))
             elif code == 78:    # NoticeResponse('N')
                 pass
@@ -761,8 +780,8 @@ class Connection(object):
             self.sock = None
 
 
-def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False, tzinfo=None):
+    return Connection(user, password, database, host, port, timeout, use_ssl, tzinfo)
 
 
 def output_results(conn, query, with_header=True, separator="\t", null='null', file=sys.stdout):
