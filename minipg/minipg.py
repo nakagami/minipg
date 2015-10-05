@@ -484,7 +484,11 @@ class Connection(object):
     def _process_messages(self, obj):
         errobj = None
         while True:
-            code = ord(self._read(1))
+            try:
+                code = ord(self._read(1))
+            except OperationalError:
+                # something error occured
+                break
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
             if DEBUG:
