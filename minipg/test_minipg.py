@@ -28,7 +28,6 @@ import io
 import decimal
 import datetime
 import minipg
-#import pytz
 
 
 class TestMiniPG(unittest.TestCase):
@@ -43,7 +42,7 @@ class TestMiniPG(unittest.TestCase):
             user=self.user,
             password=self.password,
             database=self.database,
-#            tzinfo=pytz.timezone('UTC'),
+            tzinfo=minipg.UTC(),
         )
 
     def tearDown(self):
