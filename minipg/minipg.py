@@ -236,7 +236,6 @@ def _decode_column(data, oid, encoding, tzinfo):
                     microseconds = 0
             else:
                 hours = minites = seconds = microseconds = 0
-
         hours = int(hours)
         minites = int(minites)
         seconds = int(seconds)
@@ -263,6 +262,9 @@ def _decode_column(data, oid, encoding, tzinfo):
         return [float(f) for f in data[1:-1].split(',')]
     elif oid in (PG_TYPE_INT2VECTOR, ):
         return [int(i) for i in data.split(' ')]
+    elif oid in (PG_TYPE_POINT, ):
+        x, y = data[1:-1].split(',')
+        return (float(x), float(y))
     else:
         if DEBUG:
             raise ValueError('Unknown oid=' + str(oid) + ":" + data)
