@@ -34,7 +34,7 @@ import collections
 import binascii
 from argparse import ArgumentParser
 
-VERSION = (0, 5, 4)
+VERSION = (0, 5, 6)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
@@ -503,7 +503,11 @@ class Connection(object):
     def _process_messages(self, obj):
         errobj = None
         while True:
-            code = ord(self._read(1))
+            try:
+                code = ord(self._read(1))
+            except OperationalError:
+                # something error occured
+                break
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
             if DEBUG:
