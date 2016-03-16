@@ -7,7 +7,6 @@ python:
 
 install:
   - pip install cython
-  - pip install pytz
 
 addons:
   postgresql: "9.4"

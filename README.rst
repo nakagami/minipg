@@ -84,6 +84,12 @@ or
 
 ::
 
+   $ echo 'SELECT * FROM FOO' | python -m minipg -H pg_server -U user -W pass -D db_name
+
+or
+
+::
+
    $ python -m minipg -H pg_server -U user -W pass -D db_name -Q 'SELECT * FROM FOO'
 
 
