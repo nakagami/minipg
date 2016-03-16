@@ -268,6 +268,10 @@ def _decode_column(data, oid, encoding, tzinfo):
         return [int(i) for i in data.split(' ')]
     elif oid in (PG_TYPE_POINT, ):
         return _parse_point(data)
+    elif oid in (PG_TYPE_CIRCLE, ):
+        p = data[1:data.find(')')+1]
+        r = data[len(p)+2:-1]
+        return (_parse_point(p), float(r))
     else:
         if DEBUG:
             raise ValueError('Unknown oid=' + str(oid) + ":" + data)

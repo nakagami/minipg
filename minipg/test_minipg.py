@@ -273,16 +273,18 @@ false|5|1.300|2.3|ABC's|2001-01-03
               pk1       serial,
               pk2       bigserial,
               r         real,
-              p         point
+              p         point,
+              c         circle
             )
         """)
-        cur.execute(u"insert into test_serial(r, p) values (1.0, point(1.1, 2.2))")
-        cur.execute(u"select pk1, pk2, r, p from test_serial")
+        cur.execute(u"insert into test_serial(r, p, c) values (1.0, point(1.1, 2.2), circle(point(1.1,2.2),3.3))")
+        cur.execute(u"select pk1, pk2, r, p, c from test_serial")
         r = cur.fetchone()
         self.assertEqual(r[0], 1)
         self.assertEqual(r[1], 1)
         self.assertEqual(r[2], 1.0)
         self.assertEqual(r[3], (1.1, 2.2))
+        self.assertEqual(r[4], ((1.1, 2.2), 3.3))
 
 if __name__ == "__main__":
     unittest.main()
