@@ -162,6 +162,10 @@ def _decode_column(data, oid, encoding, tzinfo):
             offset = int(data[n:]) * 3600
         return s, datetime.timedelta(seconds=offset)
 
+    def _parse_point(data):
+        x, y = data[1:-1].split(',')
+        return (float(x), float(y))
+
     if data is None:
         return data
     data = data.decode(encoding)
@@ -263,8 +267,7 @@ def _decode_column(data, oid, encoding, tzinfo):
     elif oid in (PG_TYPE_INT2VECTOR, ):
         return [int(i) for i in data.split(' ')]
     elif oid in (PG_TYPE_POINT, ):
-        x, y = data[1:-1].split(',')
-        return (float(x), float(y))
+        return _parse_point(data)
     else:
         if DEBUG:
             raise ValueError('Unknown oid=' + str(oid) + ":" + data)
