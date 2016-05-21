@@ -36,11 +36,12 @@ def asc_dump(s):
 
 def parse_message(server_sock, client_sock):
     server_code = 0
-    while server_code == 90:
+    while server_code != 90:
         server_head = server_sock.recv(5)
         server_code = server_head[0]
         server_ln = int.from_bytes(server_head[1:], byteorder='big')
         server_data = server_sock.server(server_ln)
+        server_data = server_sock.recv(server_ln)
         print('<<', chr(server_code), binascii.b2a_hex(server_data), asc_dump(server_data))
         client_sock.send(server_head)
         client_sock.send(server_data)
@@ -62,6 +63,7 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
 
     login_packet = read_login_packet(client_sock)
     print('login:', binascii.b2a_hex(login_packet))
+    server_sock.send(login_packet)
     parse_message(server_sock, client_sock)
 
     while True:
