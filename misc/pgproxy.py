@@ -26,6 +26,15 @@ import sys
 import socket
 import binascii
 
+def recv_from_sock(sock, nbytes):
+    n = nbytes
+    recieved = b''
+    while n:
+        bs = sock.recv(n)
+        recieved += bs
+        n -= len(bs)
+    return recieved
+
 def asc_dump(s):
     r = ''
     for c in s:
@@ -36,21 +45,23 @@ def asc_dump(s):
 
 def parse_message(server_sock, client_sock):
     while True:
-        server_head = server_sock.recv(5)
+        server_head = recv_from_sock(server_sock, 5)
         server_code = server_head[0]
         server_ln = int.from_bytes(server_head[1:], byteorder='big') -4
-        server_data = server_sock.recv(server_ln)
+        server_data = recv_from_sock(server_sock, server_ln)
         print('<<', chr(server_code), binascii.b2a_hex(server_data), end='')
         asc_dump(server_data)
         client_sock.send(server_head)
         client_sock.send(server_data)
-        if server_code == 90 and server_data == b'I':
+#        if server_code == 90 and server_data == b'I':
+        if server_code == 90:
             break
 
+
 def read_login_packet(sock):
-    head = sock.recv(4)
+    head = recv_from_sock(sock, 4)
     ln = int.from_bytes(head, byteorder='big')
-    return head + sock.recv(ln-4)
+    return head + recv_from_sock(sock, ln-4)
 
 
 def proxy_wire(server_name, server_port, listen_host, listen_port):
@@ -67,14 +78,17 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
     parse_message(server_sock, client_sock)
 
     while True:
-        client_head = client_sock.recv(5)
+        client_head = recv_from_sock(client_sock, 5)
         client_code = client_head[0]
         client_ln = int.from_bytes(client_head[1:], byteorder='big')
-        client_data = client_sock.recv(client_ln)
+        client_data = recv_from_sock(client_sock, client_ln-4)
+        client_tail = recv_from_sock(client_sock, 5)
+        assert client_tail == b'H\x00\x00\x00\x04'
         print('>>', chr(client_code), binascii.b2a_hex(client_data), end='')
         asc_dump(client_data)
         server_sock.send(client_head)
         server_sock.send(client_data)
+        server_sock.send(client_tail)
         parse_message(server_sock, client_sock)
 
 if __name__ == '__main__':
