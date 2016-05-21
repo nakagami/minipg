@@ -47,14 +47,11 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
         client_code = client_head[0]
         client_ln = int.from_bytes(client_head[1:], byteorder='big')
         client_data = client_sock.recv(client_ln)
-        client_tail = client_sock.recv(5)
-        assert client_tail == b'H\x00\x00\x00\x04'
         print('>>', chr(client_code), binascii.b2a_hex(client_data), asc_dump(client_data))
         server_sock.send(client_head)
         server_sock.send(client_data)
-        server_sock.send(client_tail)
 
-        server_code == 0
+        server_code = 0
         while server_code == 90:
             server_head = server_sock.recv(5)
             server_code = server_head[0]
