@@ -31,20 +31,21 @@ def asc_dump(s):
     for c in s:
         r += chr(c) if (c >= 32 and c < 128) else '.'
     if r:
-        print('\t[' + r + ']')
+        print('[' + r + ']')
 
 
 def parse_message(server_sock, client_sock):
-    server_code = 0
-    while server_code != 90:
+    while True:
         server_head = server_sock.recv(5)
         server_code = server_head[0]
-        server_ln = int.from_bytes(server_head[1:], byteorder='big')
+        server_ln = int.from_bytes(server_head[1:], byteorder='big') -4
         server_data = server_sock.recv(server_ln)
-        print('<<%d:%s' % (server_code, binascii.b2a_hex(server_data)))
+        print('<<', chr(server_code), binascii.b2a_hex(server_data), end='')
         asc_dump(server_data)
         client_sock.send(server_head)
         client_sock.send(server_data)
+        if server_code == 90 and server_data == b'I':
+            break
 
 def read_login_packet(sock):
     head = sock.recv(4)
@@ -70,7 +71,8 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
         client_code = client_head[0]
         client_ln = int.from_bytes(client_head[1:], byteorder='big')
         client_data = client_sock.recv(client_ln)
-        print('>>', chr(client_code), binascii.b2a_hex(client_data), asc_dump(client_data))
+        print('>>', chr(client_code), binascii.b2a_hex(client_data), end='')
+        asc_dump(client_data)
         server_sock.send(client_head)
         server_sock.send(client_data)
         parse_message(server_sock, client_sock)
