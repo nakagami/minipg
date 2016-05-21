@@ -49,11 +49,10 @@ def parse_message(server_sock, client_sock):
         server_code = server_head[0]
         server_ln = int.from_bytes(server_head[1:], byteorder='big') -4
         server_data = recv_from_sock(server_sock, server_ln)
-        print('<<', chr(server_code), binascii.b2a_hex(server_data), end='')
+        print('<<', chr(server_code), binascii.b2a_hex(server_data).decode('ascii'), end='')
         asc_dump(server_data)
         client_sock.send(server_head)
         client_sock.send(server_data)
-#        if server_code == 90 and server_data == b'I':
         if server_code == 90:
             break
 
@@ -73,7 +72,7 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
     server_sock.connect((server_name, server_port))
 
     login_packet = read_login_packet(client_sock)
-    print('>> login ', binascii.b2a_hex(login_packet))
+    print('>> login ', binascii.b2a_hex(login_packet).decode('ascii'))
     server_sock.send(login_packet)
     parse_message(server_sock, client_sock)
 
@@ -84,7 +83,7 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
         client_data = recv_from_sock(client_sock, client_ln-4)
         client_tail = recv_from_sock(client_sock, 5)
         assert client_tail == b'H\x00\x00\x00\x04'
-        print('>>', chr(client_code), binascii.b2a_hex(client_data), end='')
+        print('>>', chr(client_code), binascii.b2a_hex(client_data).decode('ascii'), end='')
         asc_dump(client_data)
         server_sock.send(client_head)
         server_sock.send(client_data)
