@@ -41,7 +41,7 @@ def parse_message(server_sock, client_sock):
         server_code = server_head[0]
         server_ln = int.from_bytes(server_head[1:], byteorder='big')
         server_data = server_sock.recv(server_ln)
-        print('<<', chr(server_code), binascii.b2a_hex(server_data))
+        print('<<%d:%s' % (server_code, binascii.b2a_hex(server_data)))
         asc_dump(server_data)
         client_sock.send(server_head)
         client_sock.send(server_data)
