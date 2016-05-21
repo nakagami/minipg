@@ -62,7 +62,7 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
     server_sock.connect((server_name, server_port))
 
     login_packet = read_login_packet(client_sock)
-    print('login:', binascii.b2a_hex(login_packet))
+    print('>> login ', binascii.b2a_hex(login_packet))
     server_sock.send(login_packet)
     parse_message(server_sock, client_sock)
 
