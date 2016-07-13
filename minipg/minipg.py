@@ -683,7 +683,7 @@ class Connection(object):
         if self.timeout is not None:
             self.sock.settimeout(float(self.timeout))
         # protocol version 3.0
-        v = _bint_to_bytes(196608)
+        v = b'\x00\x03\x00\x00'
         v += b'user\x00' + self.user.encode('ascii') + b'\x00'
         if self.database:
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
