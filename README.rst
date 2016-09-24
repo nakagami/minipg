@@ -99,3 +99,10 @@ Restrictions and Unsupported Features
 - Authentication METHOD only can 'trust' or  'md5' in pg_hba.conf.
 - Not full support for array data types.
 - Not support for prepared statements.
+
+
+For micropython
+----------------
+
+micropg.py https://gist.github.com/nakagami/a6626ed2d954b8b04548c52369be85c3
+is a PostgreSQL driver for micropython https://github.com/micropython/micropython .
