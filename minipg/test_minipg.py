@@ -109,7 +109,7 @@ false|5|1.300|2.3|ABC's|2001-01-03
         try:
             cur.execute("E")
         except minipg.DatabaseError as e:
-            self.assertTrue(str(e).find(u'42601'))
+            self.assertFalse(str(e).find(u'42601') < 0)
             self.connection.rollback()
         self.connection.execute("select * from test_basic")
 
