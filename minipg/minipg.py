@@ -538,13 +538,13 @@ class Connection(object):
                     self._send_message(b'p', b''.join([b'md5', hash2, '\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
-            elif code == 83:    # ParamterStatus('S')
+            elif code == 83:    # ParameterStatus('S')
                 k, v, _ = data.split(b'\x00')
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
             elif code == 75:    # BackendKeyData('K')
                 pass
-            elif code == 67:    # CommandComplte('C')
+            elif code == 67:    # CommandComplete('C')
                 if not obj:
                     continue
                 command = data[:-1].decode('ascii')
