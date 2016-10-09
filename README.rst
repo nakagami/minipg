@@ -104,5 +104,5 @@ Restrictions and Unsupported Features
 For micropython
 ----------------
 
-micropg.py https://gist.github.com/nakagami/a6626ed2d954b8b04548c52369be85c3
-is a PostgreSQL driver for micropython https://github.com/micropython/micropython .
+See https://github.com/nakagami/micropg .
+It's a minipg subset driver.
