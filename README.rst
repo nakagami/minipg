@@ -101,7 +101,7 @@ Restrictions and Unsupported Features
 - Not support for prepared statements.
 
 
-For micropython
+For MicroPython
 ----------------
 
 See https://github.com/nakagami/micropg .
