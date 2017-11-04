@@ -668,8 +668,7 @@ class Connection(object):
             n += self.sock.send(b[n:])
 
     def _open(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
         if DEBUG:
             DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
@@ -680,8 +679,6 @@ class Connection(object):
                 self.sock = ssl.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
-        if self.timeout is not None:
-            self.sock.settimeout(float(self.timeout))
         # protocol version 3.0
         v = b'\x00\x03\x00\x00'
         v += b'user\x00' + self.user.encode('ascii') + b'\x00'
