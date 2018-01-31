@@ -542,6 +542,9 @@ class Connection(object):
                 k, v, _ = data.split(b'\x00')
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
+                elif k == b'server_version':
+                    v = v.split(b'.')
+                    self.pg_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
             elif code == 75:    # BackendKeyData('K')
                 pass
             elif code == 67:    # CommandComplete('C')
