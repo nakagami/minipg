@@ -498,6 +498,7 @@ class Connection(object):
         self.tzinfo = tzinfo
         self.encoding = 'UTF8'
         self.autocommit = False
+        self.pg_version = 0
         self._ready_for_query = b'I'
         self._open()
         self.encoders = {}
