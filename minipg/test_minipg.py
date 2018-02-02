@@ -130,7 +130,6 @@ false|5|1.300|2.3|ABC's|2001-01-03
         """)
         self.connection.commit()
         # roolback
-        cur.connection.begin()
         cur.execute("insert into test_trans (i2) values (1)")
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 1)
@@ -144,7 +143,6 @@ false|5|1.300|2.3|ABC's|2001-01-03
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 1)
         self.connection.commit()
-        cur.connection.begin()
         cur.execute("insert into test_trans (i2) values (2)")
         cur.execute("select count(*) from test_trans")
         self.assertEqual(cur.fetchone()[0], 2)
