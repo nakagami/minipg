@@ -761,6 +761,12 @@ class Connection(object):
             self.begin()
         self._execute(query, obj)
 
+    @property
+    def isolation_level(self):
+        cur = self.cursor()
+        cur.execute('SHOW TRANSACTION ISOLATION LEVEL')
+        return cur.fetchone()[0]
+
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
 
