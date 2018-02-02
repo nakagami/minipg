@@ -37,6 +37,10 @@ class TestMiniPG(unittest.TestCase):
     database = 'test_minipg'
 
     def setUp(self):
+        try:
+            minipg.create_database(self.database, self.host, self.user, self.password)
+        except:
+            pass
         self.connection = minipg.connect(
             host=self.host,
             user=self.user,

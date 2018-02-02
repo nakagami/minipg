@@ -821,6 +821,17 @@ def connect(host, user, password='', database=None, port=5432, timeout=None, use
     return Connection(user, password, database, host, port, timeout, use_ssl, tzinfo)
 
 
+def create_database(database, host, user, password='', port=5432, use_ssl=False):
+    conn = connect(host, user, password, None, port, None, use_ssl)
+    conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+    conn.process_messages(None)
+
+def drop_database(database, host, user, password='', port=5432, use_ssl=False):
+    conn = connect(host, user, password, None, port, None, use_ssl)
+    conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
+    conn.process_messages(None)
+
+
 def output_results(conn, query, with_header=True, separator="\t", null='null', file=sys.stdout):
     def _ustr(c):
         if c is None:
