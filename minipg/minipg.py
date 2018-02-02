@@ -748,7 +748,6 @@ class Connection(object):
         return Cursor(self)
 
     def _execute(self, query, obj):
-        DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
