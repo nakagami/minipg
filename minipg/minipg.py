@@ -817,16 +817,16 @@ class Connection(object):
             self.sock = None
 
 
-def connect(host, user, password='', database=None, port=5432, timeout=None, use_ssl=False, tzinfo=None):
-    return Connection(user, password, database, host, port, timeout, use_ssl, tzinfo)
+def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False, tzinfo=None):
+    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl, tzinfo)
 
 
-def create_database(database, host, user, password='', port=5432, use_ssl=False):
+def create_database(database, host, user, password='', port=None, use_ssl=False):
     conn = connect(host, user, password, None, port, None, use_ssl)
     conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.process_messages(None)
 
-def drop_database(database, host, user, password='', port=5432, use_ssl=False):
+def drop_database(database, host, user, password='', port=None, use_ssl=False):
     conn = connect(host, user, password, None, port, None, use_ssl)
     conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
     conn.process_messages(None)
