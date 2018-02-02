@@ -221,10 +221,25 @@ def _decode_column(data, oid, encoding, tzinfo):
         dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
-        if data == '1 day':
-            return datetime.timedelta(days=1)
+        if data[:5] == '1 day':
+            days = 1
+            data = data[5:]
+            if len(data) == 0:
+                hours = minites = seconds = microseconds = 0
+            else:
+                hours, minites, seconds = data.split(':')
+                if seconds.find('.') != -1:
+                    seconds, microseconds = seconds.split('.')
+                else:
+                    microseconds = 0
+                hours = int(hours)
+                minites = int(minites)
+                seconds = int(seconds)
+                microseconds = int(microseconds)
+            return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
         dt = data.split('days')
         if len(dt) < 2:
+
             days = 0
             hours, minites, seconds = dt[0].split(':')
             if seconds.find('.') != -1:
