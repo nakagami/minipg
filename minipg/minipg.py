@@ -787,7 +787,6 @@ class Connection(object):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
-            self.begin()
 
     def rollback(self):
         if self.sock:
