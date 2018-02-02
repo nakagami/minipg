@@ -773,13 +773,16 @@ class Connection(object):
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
 
+    def _begin(self):
+        self._send_message(b'Q', b"BEGIN\x00")
+        self._process_messages(None)
+
     def begin(self):
         if DEBUG:
             DEBUG_OUTPUT('BEGIN')
         if self._ready_for_query == b'E':
-            self.rollback()
-        self._send_message(b'Q', b"BEGIN\x00")
-        self._process_messages(None)
+            self._rollback()
+        self._begin()
 
     def commit(self):
         if DEBUG:
@@ -787,13 +790,18 @@ class Connection(object):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
+            self._begin()
 
-    def rollback(self):
+    def _rollback(self):
         if self.sock:
-            if DEBUG:
-                DEBUG_OUTPUT('ROLLBACK')
             self._send_message(b'Q', b"ROLLBACK\x00")
         self.process_messages(None)
+
+    def rollback(self):
+        if DEBUG:
+            DEBUG_OUTPUT('ROLLBACK')
+        self._rollback()
+        self.begin()
 
     def reopen(self):
         self.close()
