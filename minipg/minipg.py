@@ -46,7 +46,8 @@ DEBUG = False
 
 
 def DEBUG_OUTPUT(s):
-    print(s, end=' \n', file=sys.stderr)
+    if DEBUG:
+        print(s, end=' \n', file=sys.stderr)
 
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.3/static/protocol.html
@@ -255,8 +256,7 @@ def _decode_column(data, oid, encoding, tzinfo):
     elif oid in (PG_TYPE_UUID, ):
         return uuid.UUID(data)
     elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
-        if DEBUG:
-            DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
+        DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
         return data
     elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
         return [int(i) for i in data[1:-1].split(',')]
@@ -510,6 +510,7 @@ class Connection(object):
         self.close()
 
     def _send_message(self, message, data):
+        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
         self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
     def _process_messages(self, obj):
@@ -522,13 +523,13 @@ class Connection(object):
                 break
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
-            if DEBUG:
-                DEBUG_OUTPUT("%d\t%i\t%s" % (code, ln, binascii.b2a_hex(data)))
-            if code == 90:  # ReadyForQuery('Z')
+            if code == 90:
                 self._ready_for_query = data
+                DEBUG_OUTPUT("-> ReadyForQuery('Z'):{}".format(data))
                 break
-            elif code == 82:    # Authenticaton('R')
+            elif code == 82:
                 auth_method = _bytes_to_bint(data[:4])
+                DEBUG_OUTPUT("-> Authentication('R'):{}".format(auth_method))
                 if auth_method == 0:      # trust
                     pass
                 elif auth_method == 5:    # md5
@@ -539,8 +540,9 @@ class Connection(object):
                     self._send_message(b'p', b''.join([b'md5', hash2, b'\x00']))
                 else:
                     errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
-            elif code == 83:    # ParameterStatus('S')
+            elif code == 83:
                 k, v, _ = data.split(b'\x00')
+                DEBUG_OUTPUT("-> ParameterStatus('S'):{}:{}".format(k, v))
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
                 elif k == b'server_version':
@@ -548,10 +550,12 @@ class Connection(object):
                     self.pg_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
             elif code == 75:    # BackendKeyData('K')
                 pass
-            elif code == 67:    # CommandComplete('C')
+            elif code == 67:
                 if not obj:
+                    DEBUG_OUTPUT("-> CommandComplete('C')")
                     continue
                 command = data[:-1].decode('ascii')
+                DEBUG_OUTPUT("-> CommandComplete('C'):{}".format(command))
                 if command == 'SHOW':
                     obj._rowcount = 1
                 else:
@@ -559,7 +563,7 @@ class Connection(object):
                         if command[:len(k)] == k:
                             obj._rowcount = int(command.split(' ')[-1])
                             break
-            elif code == 84:    # RowDescription('T')
+            elif code == 84:
                 if not obj:
                     continue
                 count = _bytes_to_bint(data[0:2])
@@ -595,8 +599,10 @@ class Connection(object):
                     n += 18
                     obj.description[idx] = field
                     idx += 1
-            elif code == 68:    # DataRow('D')
+                DEBUG_OUTPUT("-> RowDescription('T'):{}".format(obj.description))
+            elif code == 68:
                 if not obj:
+                    DEBUG_OUTPUT("-> DataRow('D')")
                     continue
                 n = 2
                 row = []
@@ -612,6 +618,7 @@ class Connection(object):
                 for i in range(len(row)):
                     row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                 obj._rows.append(tuple(row))
+                DEBUG_OUTPUT("-> DataRow('D'):{}".format(tuple(row)))
             elif code == 78:    # NoticeResponse('N')
                 pass
             elif code == 69 and not errobj:     # ErrorResponse('E')
@@ -642,6 +649,7 @@ class Connection(object):
                 # send CopyDone and Sync
                 self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
+                DEBUG_OUTPUT("-> Unknown({}):{}{}".format(code, ln, binascii.b2a_hex(data)))
                 pass
         return errobj
 
@@ -673,8 +681,7 @@ class Connection(object):
 
     def _open(self):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
-        if DEBUG:
-            DEBUG_OUTPUT("socket %s:%d" % (self.host, self.port))
+        DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.use_ssl:
             import ssl
             self._write(_bint_to_bytes(8))
@@ -741,8 +748,7 @@ class Connection(object):
         return Cursor(self)
 
     def _execute(self, query, obj):
-        if DEBUG:
-            DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
+        DEBUG_OUTPUT('Connection::_execute()\t%s' % (query, ))
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
