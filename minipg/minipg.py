@@ -548,7 +548,8 @@ class Connection(object):
                 elif k == b'server_version':
                     v = v.split(b'.')
                     self.pg_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
-            elif code == 75:    # BackendKeyData('K')
+            elif code == 75:
+                DEBUG_OUTPUT("-> BackendKeyData('K')")
                 pass
             elif code == 67:
                 if not obj:
@@ -619,13 +620,15 @@ class Connection(object):
                     row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
                 obj._rows.append(tuple(row))
                 DEBUG_OUTPUT("-> DataRow('D'):{}".format(tuple(row)))
-            elif code == 78:    # NoticeResponse('N')
+            elif code == 78:
+                DEBUG_OUTPUT("-> NoticeResponse('N')")
                 pass
-            elif code == 69 and not errobj:     # ErrorResponse('E')
+            elif code == 69 and not errobj:
                 err = data.split(b'\x00')
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[1][1:]
                 message = errcode + b':' + err[2][1:]
+                DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
                 if not PY2:
                     message = message.decode(self.encoding)
                 if errcode[:2] == b'23':
