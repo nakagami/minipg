@@ -287,7 +287,7 @@ false|5|1.300|2.3|ABC's|2001-01-03
         self.assertEqual(r[4], ((1.1, 2.2), 3.3))
 
     def test_isolation_level(self):
-        self.assertTrue(isinstance(self.connection.isolation_level, str))
+        self.assertEqual(self.connection.isolation_level, u'read committed')
 
 if __name__ == "__main__":
     unittest.main()
