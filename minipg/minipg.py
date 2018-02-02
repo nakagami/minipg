@@ -757,8 +757,8 @@ class Connection(object):
             self.commit()
 
     def execute(self, query, obj=None):
-        if self._ready_for_query != b'T':
-            self.begin()
+#        if self._ready_for_query != b'T':
+#            self.begin()
         self._execute(query, obj)
 
     def get_parameter_status(self, s):
@@ -787,6 +787,7 @@ class Connection(object):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
+            self.begin()
 
     def rollback(self):
         if self.sock:
