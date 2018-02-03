@@ -52,10 +52,10 @@ def DEBUG_OUTPUT(s):
         print(s, end=' \n', file=sys.stderr)
 
 #-----------------------------------------------------------------------------
-# http://www.postgresql.org/docs/9.3/static/protocol.html
-# http://www.postgresql.org/docs/9.3/static/protocol-message-formats.html
+# http://www.postgresql.org/docs/9.6/static/protocol.html
+# http://www.postgresql.org/docs/9.6/static/protocol-message-formats.html
 
-# postgresql-9.3.5/src/include/catalog/pg_type.h
+# https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
 PG_TYPE_BOOL = 16
 PG_TYPE_BYTEA = 17
 PG_TYPE_CHAR = 18
@@ -91,14 +91,15 @@ PG_TYPE_CASH = 790
 PG_TYPE_MACADDR = 829
 PG_TYPE_INET = 869
 PG_TYPE_CIDR = 650
+PG_TYPE_BOOLARRAY = 1000
 PG_TYPE_NAMEARRAY = 1003
 PG_TYPE_INT2ARRAY = 1005
 PG_TYPE_INT4ARRAY = 1007
 PG_TYPE_TEXTARRAY = 1009
-PG_TYPE_ARRAYOID = 1028
+PG_TYPE_VARCHARARRAY = 1015
 PG_TYPE_FLOAT4ARRAY = 1021
+PG_TYPE_ARRAYOID = 1028
 PG_TYPE_ACLITEM = 1033
-PG_TYPE_CSTRINGARRAY = 1263
 PG_TYPE_BPCHAR = 1042
 PG_TYPE_VARCHAR = 1043
 PG_TYPE_DATE = 1082
@@ -106,6 +107,7 @@ PG_TYPE_TIME = 1083
 PG_TYPE_TIMESTAMP = 1114
 PG_TYPE_TIMESTAMPTZ = 1184
 PG_TYPE_INTERVAL = 1186
+PG_TYPE_CSTRINGARRAY = 1263
 PG_TYPE_TIMETZ = 1266
 PG_TYPE_BIT = 1560
 PG_TYPE_VARBIT = 1562
@@ -139,6 +141,7 @@ PG_TYPE_ANYELEMENT = 2283
 PG_TYPE_ANYNONARRAY = 2776
 PG_TYPE_ANYENUM = 3500
 PG_TYPE_FDW_HANDLER = 3115
+PG_TYPE_JSONBOID = 3802
 PG_TYPE_ANYRANGE = 3831
 
 
@@ -455,16 +458,18 @@ class Connection(object):
             hex_str = data[2:]
             ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
             return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
-        elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
+        elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON, PG_TYPE_JSONBOID):
             return data
         elif oid in (PG_TYPE_UUID, ):
             return uuid.UUID(data)
         elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
             DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
             return data
+        elif oid in (PG_TYPE_BOOLARRAY, ):
+            return [b == 't' for b in data[1:-1].split(',')]
         elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
             return [int(i) for i in data[1:-1].split(',')]
-        elif oid in (PG_TYPE_NAMEARRAY, PG_TYPE_TEXTARRAY):
+        elif oid in (PG_TYPE_NAMEARRAY, PG_TYPE_TEXTARRAY, PG_TYPE_VARCHARARRAY):
             return [s for s in data[1:-1].split(',')]
         elif oid in (PG_TYPE_FLOAT4ARRAY, ):
             return [float(f) for f in data[1:-1].split(',')]
@@ -481,6 +486,7 @@ class Connection(object):
         else:
             if DEBUG:
                 raise ValueError('Unknown oid=' + str(oid) + ":" + data)
+#            print('Unknown oid=' + str(oid) + ":" + data)
         return data
 
     def _process_messages(self, obj):
