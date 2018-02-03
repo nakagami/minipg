@@ -137,7 +137,7 @@ cdef class Connection:
     cdef void process_messages(Connection self, object obj) except *
 
     cdef void _send_message(Connection self, bytes message, bytes data)
-    cdef object _decode_column(Connection self, bytes data, int oid)
+    cdef object _decode_column(Connection self, object data, int oid)
 
     cdef bytes _read(Connection self, int ln)
 
