@@ -598,8 +598,8 @@ class Connection(object):
             elif code == 69 and not errobj:
                 err = data.split(b'\x00')
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-                errcode = err[1][1:]
-                message = errcode + b':' + err[2][1:]
+                errcode = err[2][1:]
+                message = errcode + b':' + err[3][1:]
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
                 if not PY2:
                     message = message.decode(self.encoding)
