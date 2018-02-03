@@ -428,7 +428,7 @@ class Connection(object):
             dt = dt.replace(tzinfo=self.tzinfo)
             return dt
         elif oid in (PG_TYPE_INTERVAL, ):
-            dt = re.split('day|days', data)
+            dt = re.split('day?s', data)
             if len(dt) < 2:
                 days = 0
                 t = dt[0]
