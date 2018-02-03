@@ -142,139 +142,6 @@ PG_TYPE_FDW_HANDLER = 3115
 PG_TYPE_ANYRANGE = 3831
 
 
-class UTC(datetime.tzinfo):
-    def utcoffset(self, dt):
-        return datetime.timedelta(0)
-
-    def tzname(self, dt):
-        return "UTC"
-
-    def dst(self, dt):
-        return datetime.timedelta(0)
-
-
-def _decode_column(data, oid, encoding, tzinfo):
-    def _get_timezone_offset(data):
-        n = data.rfind('+')
-        if n == -1:
-            n = data.rfind('-')
-            s = data[:n]
-            offset = int(data[n:]) * 3600 * -1
-        else:
-            s = data[:n]
-            offset = int(data[n:]) * 3600
-        return s, datetime.timedelta(seconds=offset)
-
-    def _parse_point(data):
-        x, y = data[1:-1].split(',')
-        return (float(x), float(y))
-
-    if data is None:
-        return data
-    data = data.decode(encoding)
-    if oid in (PG_TYPE_BOOL,):
-        return data == 't'
-    elif oid in (PG_TYPE_INT2, PG_TYPE_INT4, PG_TYPE_INT8, PG_TYPE_OID,):
-        return int(data)
-    elif oid in (PG_TYPE_FLOAT4, PG_TYPE_FLOAT8):
-        return float(data)
-    elif oid in (PG_TYPE_NUMERIC, ):
-        return decimal.Decimal(data)
-    elif oid in (PG_TYPE_DATE, ):
-        dt = datetime.datetime.strptime(data, '%Y-%m-%d')
-        return datetime.date(dt.year, dt.month, dt.day)
-    elif oid in (PG_TYPE_TIME, ):
-        if len(data) == 8:
-            dt = datetime.datetime.strptime(data, '%H:%M:%S')
-        else:
-            dt = datetime.datetime.strptime(data, '%H:%M:%S.%f')
-        dt = datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
-        return dt
-    elif oid in (PG_TYPE_TIMESTAMP, ):
-        if len(data) == 19:
-            dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
-        else:
-            dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
-        if tzinfo:
-            dt = dt.replace(tzinfo=tzinfo)
-        return dt
-    elif oid in (PG_TYPE_TIMETZ, ):
-        s, offset = _get_timezone_offset(data)
-        if tzinfo is None:
-            tzinfo = UTC()
-        if len(s) == 8:
-            t = datetime.datetime.strptime(s, '%H:%M:%S')
-        else:
-            t = datetime.datetime.strptime(s, '%H:%M:%S.%f')
-        t += tzinfo.utcoffset(t) - offset
-        t = t.replace(tzinfo=tzinfo)
-        return t
-    elif oid in (PG_TYPE_TIMESTAMPTZ, ):
-        s, offset = _get_timezone_offset(data)
-        if tzinfo is None:
-            tzinfo = UTC()
-        if len(s) == 19:
-            dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
-        else:
-            dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
-        dt += tzinfo.utcoffset(dt) - offset
-        dt = dt.replace(tzinfo=tzinfo)
-        return dt
-    elif oid in (PG_TYPE_INTERVAL, ):
-        dt = re.split('day|days', data)
-        if len(dt) < 2:
-            days = 0
-            t = dt[0]
-        else:
-            days = int(dt[0])
-            t = dt[1]
-        if t:
-            hours, minites, seconds = t.split(':')
-            if seconds.find('.') != -1:
-                seconds, microseconds = seconds.split('.')
-            else:
-                microseconds = 0
-        else:
-            hours = minites = seconds = microseconds = 0
-        return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
-    elif oid in (PG_TYPE_BYTEA, ):
-        assert data[:2] == u'\\x'
-        hex_str = data[2:]
-        ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
-        return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
-    elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
-        return data
-    elif oid in (PG_TYPE_UUID, ):
-        return uuid.UUID(data)
-    elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
-        DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
-        return data
-    elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
-        return [int(i) for i in data[1:-1].split(',')]
-    elif oid in (PG_TYPE_NAMEARRAY, PG_TYPE_TEXTARRAY):
-        return [s for s in data[1:-1].split(',')]
-    elif oid in (PG_TYPE_FLOAT4ARRAY, ):
-        return [float(f) for f in data[1:-1].split(',')]
-    elif oid in (PG_TYPE_INT2VECTOR, ):
-        return [int(i) for i in data.split(' ')]
-    elif oid in (PG_TYPE_POINT, ):
-        return _parse_point(data)
-    elif oid in (PG_TYPE_CIRCLE, ):
-        p = data[1:data.find(')')+1]
-        r = data[len(p)+2:-1]
-        return (_parse_point(p), float(r))
-    elif oid in (PG_TYPE_LSEG, PG_TYPE_PATH, PG_TYPE_BOX, PG_TYPE_POLYGON, PG_TYPE_LINE):
-        return eval(data)
-    else:
-        if DEBUG:
-            raise ValueError('Unknown oid=' + str(oid) + ":" + data)
-    return data
-
-# ----------------------------------------------------------------------------
-
-
 def _bytes_to_bint(b):     # Read as big endian
     if PY2:
         r = 0
@@ -506,6 +373,110 @@ class Connection(object):
         DEBUG_OUTPUT('<- {}:{}'.format(message, data))
         self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
+    def _decode_column(self, data, oid):
+        def _trim_timezone_offset(data):
+            n = data.rfind('+')
+            if n == -1:
+                n = data.rfind('-')
+            return data[:n]
+
+        def _parse_point(data):
+            x, y = data[1:-1].split(',')
+            return (float(x), float(y))
+
+        if data is None:
+            return data
+        data = data.decode(self.encoding)
+        if oid in (PG_TYPE_BOOL,):
+            return data == 't'
+        elif oid in (PG_TYPE_INT2, PG_TYPE_INT4, PG_TYPE_INT8, PG_TYPE_OID,):
+            return int(data)
+        elif oid in (PG_TYPE_FLOAT4, PG_TYPE_FLOAT8):
+            return float(data)
+        elif oid in (PG_TYPE_NUMERIC, ):
+            return decimal.Decimal(data)
+        elif oid in (PG_TYPE_DATE, ):
+            dt = datetime.datetime.strptime(data, '%Y-%m-%d')
+            return datetime.date(dt.year, dt.month, dt.day)
+        elif oid in (PG_TYPE_TIME, ):
+            if len(data) == 8:
+                dt = datetime.datetime.strptime(data, '%H:%M:%S')
+            else:
+                dt = datetime.datetime.strptime(data, '%H:%M:%S.%f')
+            dt = datetime.time(dt.hour, dt.minute, dt.second, dt.microsecond)
+            return dt
+        elif oid in (PG_TYPE_TIMESTAMP, ):
+            if len(data) == 19:
+                dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S')
+            else:
+                dt = datetime.datetime.strptime(data, '%Y-%m-%d %H:%M:%S.%f')
+            return dt
+        elif oid in (PG_TYPE_TIMETZ, ):
+            s = _trim_timezone_offset(data)
+            if len(s) == 8:
+                t = datetime.datetime.strptime(s, '%H:%M:%S')
+            else:
+                t = datetime.datetime.strptime(s, '%H:%M:%S.%f')
+            t = t.replace(tzinfo=self.tzinfo)
+            return t
+        elif oid in (PG_TYPE_TIMESTAMPTZ, ):
+            s = _trim_timezone_offset(data)
+            if len(s) == 19:
+                dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+            else:
+                dt = datetime.datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f')
+            dt = dt.replace(tzinfo=self.tzinfo)
+            return dt
+        elif oid in (PG_TYPE_INTERVAL, ):
+            dt = re.split('day|days', data)
+            if len(dt) < 2:
+                days = 0
+                t = dt[0]
+            else:
+                days = int(dt[0])
+                t = dt[1]
+            if t:
+                hours, minites, seconds = t.split(':')
+                if seconds.find('.') != -1:
+                    seconds, microseconds = seconds.split('.')
+                else:
+                    microseconds = 0
+            else:
+                hours = minites = seconds = microseconds = 0
+            return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
+        elif oid in (PG_TYPE_BYTEA, ):
+            assert data[:2] == u'\\x'
+            hex_str = data[2:]
+            ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
+            return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
+        elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSON):
+            return data
+        elif oid in (PG_TYPE_UUID, ):
+            return uuid.UUID(data)
+        elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
+            DEBUG_OUTPUT('NO DECODE type:%d' % (oid, ))
+            return data
+        elif oid in (PG_TYPE_INT2ARRAY, PG_TYPE_INT4ARRAY):
+            return [int(i) for i in data[1:-1].split(',')]
+        elif oid in (PG_TYPE_NAMEARRAY, PG_TYPE_TEXTARRAY):
+            return [s for s in data[1:-1].split(',')]
+        elif oid in (PG_TYPE_FLOAT4ARRAY, ):
+            return [float(f) for f in data[1:-1].split(',')]
+        elif oid in (PG_TYPE_INT2VECTOR, ):
+            return [int(i) for i in data.split(' ')]
+        elif oid in (PG_TYPE_POINT, ):
+            return _parse_point(data)
+        elif oid in (PG_TYPE_CIRCLE, ):
+            p = data[1:data.find(')')+1]
+            r = data[len(p)+2:-1]
+            return (_parse_point(p), float(r))
+        elif oid in (PG_TYPE_LSEG, PG_TYPE_PATH, PG_TYPE_BOX, PG_TYPE_POLYGON, PG_TYPE_LINE):
+            return eval(data)
+        else:
+            if DEBUG:
+                raise ValueError('Unknown oid=' + str(oid) + ":" + data)
+        return data
+
     def _process_messages(self, obj):
         errobj = None
         while True:
@@ -541,6 +512,8 @@ class Connection(object):
                 elif k == b'server_version':
                     v = v.split(b'.')
                     self.pg_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
+                elif k == b'TimeZone':
+                    self.tzinfo = pytz.timezone(v.decode('ascii'))
             elif code == 75:
                 DEBUG_OUTPUT("-> BackendKeyData('K')")
                 pass
@@ -610,7 +583,7 @@ class Connection(object):
                         row.append(data[n:n+ln])
                         n += ln
                 for i in range(len(row)):
-                    row[i] = _decode_column(row[i], obj.description[i][1], self.encoding, self.tzinfo)
+                    row[i] = self._decode_column(row[i], obj.description[i][1])
                 obj._rows.append(tuple(row))
                 DEBUG_OUTPUT("-> DataRow('D'):{}".format(tuple(row)))
             elif code == 78:
@@ -750,14 +723,17 @@ class Connection(object):
             self.commit()
 
     def execute(self, query, obj=None):
-#        if self._ready_for_query != b'T':
-#            self.begin()
         self._execute(query, obj)
 
     def get_parameter_status(self, s):
         with self.cursor() as cur:
             cur.execute('SHOW {}'.format(s))
             return cur.fetchone()[0]
+
+    def set_timezone(self, timezone_name):
+        self._send_message(b'Q', b"SET TIME ZONE %s\x00" % (timezone_name.encode('ascii')))
+        self.process_messages(None)
+        self.tzinfo = pytz.timezone(timezone_name)
 
     @property
     def isolation_level(self):
