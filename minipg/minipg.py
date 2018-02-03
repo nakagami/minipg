@@ -479,7 +479,7 @@ class Cursor(object):
 
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, timeout, use_ssl, tzinfo):
+    def __init__(self, user, password, database, host, port, timeout, use_ssl):
         self.user = user
         self.password = password
         self.database = database
@@ -487,13 +487,13 @@ class Connection(object):
         self.port = port
         self.timeout = timeout
         self.use_ssl = use_ssl
-        self.tzinfo = tzinfo
         self.encoding = 'UTF8'
         self.autocommit = False
         self.pg_version = 0
         self._ready_for_query = b'I'
         self._open()
         self.encoders = {}
+        self.tzinfo = None
 
     def __enter__(self):
         return self
@@ -809,8 +809,8 @@ class Connection(object):
             self.sock = None
 
 
-def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False, tzinfo=None):
-    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl, tzinfo)
+def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False):
+    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl)
 
 
 def create_database(database, host, user, password='', port=None, use_ssl=False):

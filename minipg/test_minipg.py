@@ -46,7 +46,6 @@ class TestMiniPG(unittest.TestCase):
             user=self.user,
             password=self.password,
             database=self.database,
-            tzinfo=minipg.UTC(),
         )
 
     def tearDown(self):
