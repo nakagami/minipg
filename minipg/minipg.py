@@ -34,6 +34,7 @@ import collections
 import binascii
 import re
 from argparse import ArgumentParser
+import pytz
 
 VERSION = (0, 5, 8)
 __version__ = '%s.%s.%s' % VERSION
