@@ -32,6 +32,7 @@ import time
 import uuid
 import collections
 import binascii
+import re
 from argparse import ArgumentParser
 
 VERSION = (0, 5, 8)
@@ -221,45 +222,21 @@ def _decode_column(data, oid, encoding, tzinfo):
         dt = dt.replace(tzinfo=tzinfo)
         return dt
     elif oid in (PG_TYPE_INTERVAL, ):
-        if data[:5] == '1 day':
-            days = 1
-            data = data[5:]
-            if len(data) == 0:
-                hours = minites = seconds = microseconds = 0
-            else:
-                hours, minites, seconds = data.split(':')
-                if seconds.find('.') != -1:
-                    seconds, microseconds = seconds.split('.')
-                else:
-                    microseconds = 0
-                hours = int(hours)
-                minites = int(minites)
-                seconds = int(seconds)
-                microseconds = int(microseconds)
-            return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
-        dt = data.split('days')
+        dt = re.split('day|days', data)
         if len(dt) < 2:
-
             days = 0
-            hours, minites, seconds = dt[0].split(':')
+            t = dt[0]
+        else:
+            days = int(dt[0])
+            t = dt[1]
+        if t:
+            hours, minites, seconds = t.split(':')
             if seconds.find('.') != -1:
                 seconds, microseconds = seconds.split('.')
             else:
                 microseconds = 0
         else:
-            days = int(dt[0])
-            if dt[1]:
-                hours, minites, seconds = dt[1].split(':')
-                if seconds.find('.') != -1:
-                    seconds, microseconds = seconds.split('.')
-                else:
-                    microseconds = 0
-            else:
-                hours = minites = seconds = microseconds = 0
-        hours = int(hours)
-        minites = int(minites)
-        seconds = int(seconds)
-        microseconds = int(microseconds)
+            hours = minites = seconds = microseconds = 0
         return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
     elif oid in (PG_TYPE_BYTEA, ):
         assert data[:2] == u'\\x'
