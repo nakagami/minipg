@@ -357,7 +357,7 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.pg_version = 0
+        self.server_version = 0
         self._ready_for_query = b'I'
         self._open()
         self.encoders = {}
@@ -511,7 +511,7 @@ class Connection(object):
                     self.encoding = v.decode('ascii')
                 elif k == b'server_version':
                     v = v.split(b'.')
-                    self.pg_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
+                    self.server_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
                 elif k == b'TimeZone':
                     self.tzinfo = pytz.timezone(v.decode('ascii'))
             elif code == 75:

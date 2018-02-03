@@ -124,7 +124,7 @@ cdef class Connection:
     cdef user, password, database, host, port, timeout, use_ssl, sock
     cdef _ready_for_query
     cdef public object encoding, encoders, autocommit, tzinfo
-    cdef public int pg_version
+    cdef public int server_version
 
     @cython.locals(t=cython.type)
     cpdef escape_parameter(Connection self, object v)
