@@ -433,7 +433,7 @@ class Connection(object):
                 days = 0
                 t = dt[0]
             else:
-                days = int(dt[0])
+                days = dt[0]
                 t = dt[1]
             if t:
                 hours, minites, seconds = t.split(':')
@@ -443,7 +443,13 @@ class Connection(object):
                     microseconds = 0
             else:
                 hours = minites = seconds = microseconds = 0
-            return datetime.timedelta(microseconds=microseconds, seconds=seconds, minutes=minites, hours=hours, days=days)
+            return datetime.timedelta(
+                microseconds=int(microseconds),
+                seconds=int(seconds),
+                minutes=int(minites),
+                hours=int(hours),
+                days=int(days),
+            )
         elif oid in (PG_TYPE_BYTEA, ):
             assert data[:2] == u'\\x'
             hex_str = data[2:]
