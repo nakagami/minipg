@@ -486,7 +486,8 @@ class Connection(object):
         else:
             if DEBUG:
                 raise ValueError('Unknown oid=' + str(oid) + ":" + data)
-#            print('Unknown oid=' + str(oid) + ":" + data)
+            if data[0] == '{' and data[-1] == '}':
+                data = [s for s in data[1:-1].split(',')]
         return data
 
     def _process_messages(self, obj):
