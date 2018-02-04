@@ -747,8 +747,8 @@ class Connection(object):
             return cur.fetchone()[0]
 
     def set_timezone(self, timezone_name):
-        self._send_message(b'Q', b"SET TIME ZONE '%s'\x00" % (timezone_name.encode('ascii')))
-        self.process_messages(None)
+        with self.cursor() as cur:
+            cur.execute("SET TIME ZONE %s",  [timezone_name])
         self.tzinfo = pytz.timezone(timezone_name)
 
     @property
