@@ -282,19 +282,24 @@ class Cursor(object):
     def setoutputsize(size, column=None):
         pass
 
-    def execute(self, query, args=()):
+    def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
             raise ProgrammingError(u"08003:Lost connection")
         self.description = []
         self._rows.clear()
         self.args = args
-        if args:
-            escaped_args = tuple(
-                self.connection.escape_parameter(arg).replace(u'%', u'%%') for arg in args
-            )
-            query = query.replace(u'%', u'%%').replace(u'%%s', u'%s')
+        if args is not None:
+            if isinstance(args, (tuple, list)):
+                escaped_args = tuple(
+                    [self.connection.escape_parameter(arg) for arg in args]
+                )
+            elif isinstance(args, dict):
+                escaped_args = {
+                    k: self.connection.escape_parameter(v) for (k, v) in args.items()
+                }
+            else:
+                escaped_args = self.connection.escape_parameter(args)
             query = query % escaped_args
-            query = query.replace(u'%%', u'%')
         self.query = query
         self.connection.execute(query, self)
 
