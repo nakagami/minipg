@@ -443,6 +443,7 @@ class Connection(object):
                 hours, minites, seconds = t.split(':')
                 if seconds.find('.') != -1:
                     seconds, microseconds = seconds.split('.')
+                    microseconds += "0" * (6 - len(microseconds))
                 else:
                     microseconds = 0
             else:
