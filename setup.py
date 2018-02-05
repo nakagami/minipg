@@ -48,6 +48,7 @@ setup(
     author='Hajime Nakagami',
     author_email='nakagami@gmail.com',
     description='Yet another PostgreSQL database driver',
+    long_description=open('README.rst').read(),
     license="MIT",
     packages=['minipg'],
     cmdclass=cmdclass,
