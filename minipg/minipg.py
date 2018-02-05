@@ -728,10 +728,6 @@ class Connection(object):
         else:
             return "'" + str(v) + "'"
 
-    @property
-    def is_dirty(self):
-        return self._ready_for_query in b'TE'
-
     def is_connect(self):
         return bool(self.sock)
 
