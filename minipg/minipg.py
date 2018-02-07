@@ -270,9 +270,6 @@ class Cursor(object):
     def __exit__(self, exc, value, traceback):
         self.close()
 
-    def callproc(self, procname, args=()):
-        raise NotSupportedError()
-
     def nextset(self, procname, args=()):
         raise NotSupportedError()
 
@@ -301,7 +298,23 @@ class Cursor(object):
                 escaped_args = self.connection.escape_parameter(args)
             query = query % escaped_args
         self.query = query
-        self.connection.execute(query, self)
+        self.connection.execute(self.query, self)
+
+    def callproc(self, proc_name, args=None):
+        escaped_args = []
+        if args is not None:
+            if isinstance(args, (tuple, list)):
+                escaped_args = tuple(
+                    [self.connection.escape_parameter(arg) for arg in args]
+                )
+            elif isinstance(args, dict):
+                escaped_args = {
+                    k: self.connection.escape_parameter(v) for (k, v) in args.items()
+                }
+            else:
+                escaped_args = self.connection.escape_parameter(args)
+        self.query = 'select * from ' + proc_name + '(' +  ','.join(escaped_args) + ')'
+        self.connection.execute(self.query, self)
 
     def executemany(self, query, seq_of_params):
         rowcount = 0
@@ -495,8 +508,6 @@ class Connection(object):
         else:
             if DEBUG:
                 raise ValueError('Unknown oid=' + str(oid) + ":" + data)
-            if data[0] == '{' and data[-1] == '}':
-                data = [s for s in data[1:-1].split(',')]
         return data
 
     def _process_messages(self, obj):
