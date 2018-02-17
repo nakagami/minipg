@@ -11,7 +11,6 @@ Requirements
 
 - PostgreSQL 9.6+
 - Python 2.7, 3.4+, PyPy
-- pytz https://pypi.python.org/pypi/pytz
 
 Installation
 -----------------
@@ -22,14 +21,12 @@ Install as a package
 
 ::
 
-    $ pip install -r requirements.txt
     $ pip install minipg
 
 Install as a module
 
 ::
 
-    $ pip install pytz
     $ cd $(PROJECT_HOME)
     $ wget https://github.com/nakagami/minipg/raw/master/minipg/minipg.py
 

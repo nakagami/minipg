@@ -35,7 +35,6 @@ import binascii
 import json
 import re
 from argparse import ArgumentParser
-import pytz
 
 VERSION = (0, 6, 1)
 __version__ = '%s.%s.%s' % VERSION
@@ -51,6 +50,22 @@ DEBUG = False
 def DEBUG_OUTPUT(s):
     if DEBUG:
         print(s, end=' \n', file=sys.stderr)
+
+class PgTzinfo(datetime.tzinfo):
+    def __init__(self, name, cur):
+        cur.execute('SELECT utc_offset FROM pg_timezone_names WHERE name=%s', name)
+        self._offset = cur.fetchone()[0]
+        self._name = name
+
+    def utcoffset(self, dt):
+        return self._offset
+
+    def tzname(self, dt):
+        return self._name
+
+    def dst(self, dt):
+        return datetime.timedelta(0)
+
 
 #-----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.6/static/protocol.html
@@ -381,9 +396,10 @@ class Connection(object):
         self.autocommit = False
         self.server_version = 0
         self._ready_for_query = b'I'
-        self._open()
         self.encoders = {}
+        self.tz_name = None
         self.tzinfo = None
+        self._open()
 
     def __enter__(self):
         return self
@@ -546,7 +562,8 @@ class Connection(object):
                     v = v.split(b'.')
                     self.server_version = int(v[0]) * 10000 + int(v[1]) * 100 + int(v[2])
                 elif k == b'TimeZone':
-                    self.tzinfo = pytz.timezone(v.decode('ascii'))
+                    self.tz_name = v.decode('ascii')
+                    self.tzinfo = None
             elif code == 75:
                 DEBUG_OUTPUT("-> BackendKeyData('K')")
                 pass
@@ -702,6 +719,9 @@ class Connection(object):
         self._write(_bint_to_bytes(len(v) + 4) + v)
         self.process_messages(None)
 
+        if self.tz_name and self.tzinfo is None:
+            self.set_timezone(self.tz_name)
+
     def escape_parameter(self, v):
         t = type(v)
         func = self.encoders.get(t)
@@ -762,7 +782,8 @@ class Connection(object):
     def set_timezone(self, timezone_name):
         with self.cursor() as cur:
             cur.execute("SET TIME ZONE %s",  [timezone_name])
-        self.tzinfo = pytz.timezone(timezone_name)
+            self.tz_name = timezone_name
+            self.tzinfo = PgTzinfo(self.tz_name, cur)
 
     @property
     def isolation_level(self):
