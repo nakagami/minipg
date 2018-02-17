@@ -52,10 +52,14 @@ def DEBUG_OUTPUT(s):
         print(s, end=' \n', file=sys.stderr)
 
 class PgTzinfo(datetime.tzinfo):
-    def __init__(self, name, cur):
-        cur.execute('SELECT utc_offset FROM pg_timezone_names WHERE name=%s', name)
-        self._offset = cur.fetchone()[0]
-        self._name = name
+    def __init__(self, name=None, cur=None):
+        if name is None or cur is None:
+            self._offset = datetime.timedelta(0)
+            self._name = 'UTC'
+        else:
+            cur.execute('SELECT utc_offset FROM pg_timezone_names WHERE name=%s', name)
+            self._offset = cur.fetchone()[0]
+            self._name = name
 
     def utcoffset(self, dt):
         return self._offset
