@@ -99,15 +99,6 @@ class TestMiniPG(unittest.TestCase):
         cur.execute("select to_json(test_basic) from test_basic")
         self.assertEqual(len(cur.fetchall()), 3)
 
-        f = io.StringIO()
-        minipg.output_results(self.connection, "select b1,i8,dec,dbl,s,dt from test_basic", separator=u'|', file=f)
-        text = u"""b1|i8|dec|dbl|s|dt
-true|3|1.100|2.1|あいうえお|2001-01-01
-false|null|1.200|2.2|かきくけこ|2001-01-02
-false|5|1.300|2.3|ABC's|2001-01-03
-"""
-        self.assertEqual(text, f.getvalue())
-
         self.connection.commit()
         try:
             cur.execute("E")
