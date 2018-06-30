@@ -15,20 +15,9 @@ Requirements
 Installation
 -----------------
 
-It can install as package or module.
-
-Install as a package
-
 ::
 
     $ pip install minipg
-
-Install as a module
-
-::
-
-    $ cd $(PROJECT_HOME)
-    $ wget https://github.com/nakagami/minipg/raw/master/minipg/minipg.py
 
 Example
 -----------------
@@ -70,35 +59,12 @@ COPY FROM::
    f.close()
    conn.close()
 
-Execute Query from a command line
------------------------------------
-
-::
-
-   $ python -m minipg -H pg_server -U user -W pass -D db_name <<EOS
-   > SELECT * FROM FOO
-   > EOS
-
-or
-
-::
-
-   $ echo 'SELECT * FROM FOO' | python -m minipg -H pg_server -U user -W pass -D db_name
-
-or
-
-::
-
-   $ python -m minipg -H pg_server -U user -W pass -D db_name -Q 'SELECT * FROM FOO'
-
-
 Restrictions and Unsupported Features
 --------------------------------------
 
 - Authentication METHOD only can 'trust' or  'md5' in pg_hba.conf.
 - Not full support for array data types.
 - Not support for prepared statements.
-
 
 For MicroPython
 ----------------
