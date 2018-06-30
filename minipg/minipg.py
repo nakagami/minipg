@@ -398,7 +398,7 @@ class Connection(object):
         self.use_ssl = use_ssl
         self.encoding = 'UTF8'
         self.autocommit = False
-        self.server_version = None
+        self.server_version = ''
         self._ready_for_query = b'I'
         self.encoders = {}
         self.tz_name = None
@@ -563,7 +563,7 @@ class Connection(object):
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
                 elif k == b'server_version':
-                    self.server_version = v
+                    self.server_version = v.decode('ascii')
                 elif k == b'TimeZone':
                     self.tz_name = v.decode('ascii')
                     self.tzinfo = None
