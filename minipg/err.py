@@ -59,5 +59,3 @@ class DataError(DatabaseError):
 class NotSupportedError(DatabaseError):
     def __init__(self):
         DatabaseError.__init__(self, 'NotSupportedError')
-
-
