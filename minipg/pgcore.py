@@ -45,7 +45,7 @@ from .err import (
     NotSupportedError,
 )
 
-VERSION = (0, 7, 0)
+VERSION = (0, 7, 1)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
