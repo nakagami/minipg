@@ -51,8 +51,6 @@ apilevel = '2.0'
 threadsafety = 1
 paramstyle = 'format'
 
-PY2 = sys.version_info[0] == 2
-
 DEBUG = False
 
 
@@ -175,20 +173,11 @@ PG_TYPE_ANYRANGE = 3831
 
 
 def _bytes_to_bint(b):     # Read as big endian
-    if PY2:
-        r = 0
-        for n in b:
-            r = r * 256 + ord(n)
-        return r
-    else:
-        return int.from_bytes(b, byteorder='big')
+    return int.from_bytes(b, byteorder='big')
 
 
 def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
-    if PY2:
-        return chr((val >> 24) & 0xff) + chr((val >> 16) & 0xff) + chr((val >> 8) & 0xff) + chr(val & 0xff)
-    else:
-        return val.to_bytes(4, byteorder='big')
+    return val.to_bytes(4, byteorder='big')
 
 Date = datetime.date
 Time = datetime.time
@@ -445,7 +434,7 @@ class Connection(object):
             assert data[:2] == u'\\x'
             hex_str = data[2:]
             ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
-            return b''.join([chr(c) for c in ia]) if PY2 else bytes(ia)
+            return bytes(ia)
         elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_XML):
             return data
         elif oid in (PG_TYPE_JSON, PG_TYPE_JSONBOID):
@@ -596,8 +585,7 @@ class Connection(object):
                 errcode = err[2][1:]
                 message = errcode + b':' + err[3][1:]
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
-                if not PY2:
-                    message = message.decode(self.encoding)
+                message = message.decode(self.encoding)
                 if errcode[:2] == b'23':
                     errobj = IntegrityError(message)
                 else:
@@ -682,11 +670,8 @@ class Connection(object):
             return func(self, v)
         if v is None:
             return 'NULL'
-        elif (PY2 and t == unicode) or (not PY2 and t == str):  # string
+        elif t == str:
             return u"'" + v.replace(u"'", u"''") + u"'"
-        elif PY2 and t == str:    # PY2 str
-            v = ''.join(['\\%03o' % (ord(c), ) if ord(c) < 32 or ord(c) > 127 else c for c in v])
-            return "'" + v.replace("'", "''") + "'"
         elif t == bytearray or t == bytes:        # binary
             return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
         elif t == bool:
@@ -703,7 +688,7 @@ class Connection(object):
             return "date '" + str(v) + "'"
         elif t == datetime.timedelta:
             return u"interval '" + str(v) + "'"
-        elif t == int or t == float or (PY2 and t == long):
+        elif t == int or t == float:
             return str(v)
         elif t == decimal.Decimal:
             return "decimal '" + str(v) + "'"

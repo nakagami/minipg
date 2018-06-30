@@ -1,10 +1,4 @@
-import sys
-
-PY2 = sys.version_info[0] == 2
-if not PY2:
-    StandardError = Exception
-
-class Error(StandardError):
+class Error(Exception):
     def __init__(self, *args):
         if len(args) > 0:
             self.message = args[0]
@@ -19,7 +13,7 @@ class Error(StandardError):
         return self.message
 
 
-class Warning(StandardError):
+class Warning(Exception):
     pass
 
 
