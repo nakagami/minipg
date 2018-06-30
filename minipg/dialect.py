@@ -195,25 +195,6 @@ class PGDialect_minipg(PGDialect):
 
     def __init__(self, **kwargs):
         super(PGDialect_minipg, self).__init__(**kwargs)
-        try:
-            version = self.dbapi.version
-            m = re.match(r'(\d+)\.(\d+)', version)
-            version = (int(m.group(1)), int(m.group(2)))
-        except (AttributeError, ValueError, TypeError):
-            version = (0, 0)
-        self.dbapi_version = version
-        if version < (5, 0):
-            has_native_hstore = has_native_json = has_native_uuid = False
-            if version != (0, 0):
-                util.warn("PyGreSQL is only fully supported by SQLAlchemy"
-                    " since version 5.0.")
-        else:
-            self.supports_unicode_statements = True
-            self.supports_unicode_binds = True
-            has_native_hstore = has_native_json = has_native_uuid = True
-        self.has_native_hstore = has_native_hstore
-        self.has_native_json = has_native_json
-        self.has_native_uuid = has_native_uuid
 
     def create_connect_args(self, url):
         opts = url.translate_connect_args(username='user')
@@ -224,18 +205,7 @@ class PGDialect_minipg(PGDialect):
         return [], opts
 
     def is_disconnect(self, e, connection, cursor):
-        if isinstance(e, self.dbapi.Error):
-            if not connection:
-                return False
-            try:
-                connection = connection.connection
-            except AttributeError:
-                pass
-            else:
-                if not connection:
-                    return False
-            return connection.closed
-        return False
+        return connection.is_connect()
 
 
 dialect = PGDialect_minipg
