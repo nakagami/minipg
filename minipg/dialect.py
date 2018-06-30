@@ -74,83 +74,10 @@ class _PGHStore(HSTORE):
         if not dialect.has_native_hstore:
             return super(_PGHStore, self).result_processor(dialect, coltype)
 
-
-class _PGJSON(JSON):
-
-    def bind_processor(self, dialect):
-        if not dialect.has_native_json:
-            return super(_PGJSON, self).bind_processor(dialect)
-        json = dialect.dbapi.Json
-
-        def process(value):
-            if value is self.NULL:
-                value = None
-            elif isinstance(value, Null) or (
-                value is None and self.none_as_null):
-                return None
-            if value is None or isinstance(value, (dict, list)):
-                return json(value)
-            return value
-
-        return process
-
-    def result_processor(self, dialect, coltype):
-        if not dialect.has_native_json:
-            return super(_PGJSON, self).result_processor(dialect, coltype)
-
-
-class _PGJSONB(JSONB):
-
-    def bind_processor(self, dialect):
-        if not dialect.has_native_json:
-            return super(_PGJSONB, self).bind_processor(dialect)
-        json = dialect.dbapi.Json
-
-        def process(value):
-            if value is self.NULL:
-                value = None
-            elif isinstance(value, Null) or (
-                value is None and self.none_as_null):
-                return None
-            if value is None or isinstance(value, (dict, list)):
-                return json(value)
-            return value
-
-        return process
-
     def result_processor(self, dialect, coltype):
         if not dialect.has_native_json:
             return super(_PGJSONB, self).result_processor(dialect, coltype)
 
-
-class _PGUUID(UUID):
-
-    def bind_processor(self, dialect):
-        if not dialect.has_native_uuid:
-            return super(_PGUUID, self).bind_processor(dialect)
-        uuid = dialect.dbapi.Uuid
-
-        def process(value):
-            if value is None:
-                return None
-            if isinstance(value, (str, bytes)):
-                if len(value) == 16:
-                    return uuid(bytes=value)
-                return uuid(value)
-            if isinstance(value, int):
-                return uuid(int=value)
-            return value
-
-        return process
-
-    def result_processor(self, dialect, coltype):
-        if not dialect.has_native_uuid:
-            return super(_PGUUID, self).result_processor(dialect, coltype)
-        if not self.as_uuid:
-            def process(value):
-                if value is not None:
-                    return str(value)
-            return process
 
 
 class _PGCompiler(PGCompiler):
@@ -186,15 +113,14 @@ class PGDialect_minipg(PGDialect):
         {
             Numeric: _PGNumeric,
             HSTORE: _PGHStore,
-            Json: _PGJSON,
-            JSON: _PGJSON,
-            JSONB: _PGJSONB,
-            UUID: _PGUUID,
         }
     )
 
     def __init__(self, **kwargs):
         super(PGDialect_minipg, self).__init__(**kwargs)
+        self.has_native_hstore = False
+        self.has_native_json = False
+        self.has_native_uuid = False
 
     def create_connect_args(self, url):
         opts = url.translate_connect_args(username='user')
