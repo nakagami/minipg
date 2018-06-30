@@ -5,7 +5,7 @@ from distutils.extension import Extension
 try:
     from Cython.Build import cythonize
     ext_modules = cythonize([
-        Extension("minipg.minipg", ["minipg/minipg.py"]),
+        Extension("minipg.pgcore", ["minipg/pgcore.py"]),
     ])
 except ImportError:
     ext_modules = None

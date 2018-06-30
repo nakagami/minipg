@@ -36,6 +36,15 @@ import json
 import re
 from argparse import ArgumentParser
 
+from .err import (
+    DatabaseError,
+    InterfaceError,
+    InternalError,
+    OperationalError,
+    IntegrityError,
+    NotSupportedError,
+)
+
 VERSION = (0, 6, 2)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
@@ -211,67 +220,6 @@ DATETIME = DBAPITypeObject(datetime.datetime, datetime.date, datetime.time)
 DATE = DBAPITypeObject(datetime.date)
 TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
-
-
-if not PY2:
-    StandardError = Exception
-
-
-class Error(StandardError):
-    def __init__(self, *args):
-        if len(args) > 0:
-            self.message = args[0]
-        else:
-            self.message = b'Database Error'
-        super(Error, self).__init__(*args)
-
-    def __str__(self):
-        return self.message
-
-    def __repr__(self):
-        return self.message
-
-
-class Warning(StandardError):
-    pass
-
-
-class InterfaceError(Error):
-    pass
-
-
-class DatabaseError(Error):
-    pass
-
-
-class DisconnectByPeer(Warning):
-    pass
-
-
-class InternalError(DatabaseError):
-    def __init__(self):
-        DatabaseError.__init__(self, 'InternalError')
-
-
-class OperationalError(DatabaseError):
-    pass
-
-
-class ProgrammingError(DatabaseError):
-    pass
-
-
-class IntegrityError(DatabaseError):
-    pass
-
-
-class DataError(DatabaseError):
-    pass
-
-
-class NotSupportedError(DatabaseError):
-    def __init__(self):
-        DatabaseError.__init__(self, 'NotSupportedError')
 
 
 class Cursor(object):
