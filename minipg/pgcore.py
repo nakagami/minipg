@@ -670,6 +670,8 @@ class Connection(object):
         self._write(_bint_to_bytes(len(v) + 4) + v)
         self.process_messages(None)
 
+        self._begin()
+
         if self.tz_name and self.tzinfo is None:
             self.set_timezone(self.tz_name)
 
@@ -760,12 +762,15 @@ class Connection(object):
             self.process_messages(None)
             self._begin()
 
+    def _rollback(self):
+        self._send_message(b'Q', b"ROLLBACK\x00")
+        self.process_messages(None)
+
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
-            self._send_message(b'Q', b"ROLLBACK\x00")
-            self.process_messages(None)
+            self._rollback()
             self._begin()
 
     def reopen(self):
@@ -788,11 +793,13 @@ def connect(host, user, password='', database=None, port=None, timeout=None, use
 
 def create_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
+        conn._rollback()
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
 
 
 def drop_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
+        conn._rollback()
         conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
