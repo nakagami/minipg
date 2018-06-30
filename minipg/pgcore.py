@@ -750,8 +750,6 @@ class Connection(object):
     def begin(self):
         if DEBUG:
             DEBUG_OUTPUT('BEGIN')
-        if self._ready_for_query == b'E':
-            self._rollback()
         self._begin()
 
     def commit(self):
@@ -762,16 +760,13 @@ class Connection(object):
             self.process_messages(None)
             self._begin()
 
-    def _rollback(self):
-        if self.sock:
-            self._send_message(b'Q', b"ROLLBACK\x00")
-            self.process_messages(None)
-
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
-        self._rollback()
-        self.begin()
+        if self.sock:
+            self._send_message(b'Q', b"ROLLBACK\x00")
+            self.process_messages(None)
+            self._begin()
 
     def reopen(self):
         self.close()
