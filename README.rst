@@ -59,6 +59,15 @@ COPY FROM::
    f.close()
    conn.close()
 
+As sqlalchemy dialect::
+
+   from sqlalchemy.dialects import registry
+   registry.register("postgresql.minipg", "minipg.dialect", "PGDialect_minipg")
+
+   from sqlalchemy import create_engine
+   engine = create_engine('postgresql+minipg://postgres:secret@host/database_name')
+
+
 Restrictions and Unsupported Features
 --------------------------------------
 
