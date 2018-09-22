@@ -71,7 +71,7 @@ As sqlalchemy dialect::
 Restrictions and Unsupported Features
 --------------------------------------
 
-- Authentication METHOD only can 'trust' or  'md5' in pg_hba.conf.
+- Supported Authentication METHOD are only 'trust', 'md5' and 'scram-sha-256'.
 - Not full support for array data types.
 - Not support for prepared statements.
 
