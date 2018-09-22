@@ -95,6 +95,10 @@ def parse_login_response(server_sock, client_sock):
         client_head, client_data = _recv_from_client(client_sock)
         server_sock.send(client_head + client_data)
 
+        server_head, server_data = _recv_from_server(server_sock)
+        # accept
+        assert int.from_bytes(server_data[:4], byteorder='big') == 0
+        client_sock.send(server_head + server_data)
     elif auth == 10:
         print('SASL')
         client_sock.send(server_head + server_data)
