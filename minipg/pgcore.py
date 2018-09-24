@@ -536,6 +536,7 @@ class Connection(object):
                     # r: server nonce
                     # s: servre salt
                     # i: iteration count
+                    assert server['r'][:len(client_nonce)] == client_nonce
 
                     # send client final message
                     salted_pass = hashlib.pbkdf2_hmac(
