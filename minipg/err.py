@@ -8,15 +8,13 @@ class Error(Exception):
         if len(args) > 1:
             self.code = args[1]
         else:
-            self.code = None
+            self.code = ''
 
     def __str__(self):
         return self.message
 
     def __repr__(self):
-        if self.code:
-            return self.code + ":" + self.message
-        return self.message
+        return self.code + ":" + self.message
 
 
 class Warning(Exception):
