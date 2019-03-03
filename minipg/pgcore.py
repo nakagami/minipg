@@ -592,7 +592,18 @@ class Connection(object):
                 if k == b'server_encoding':
                     self.encoding = v.decode('ascii')
                 elif k == b'server_version':
-                    self.server_version = v.decode('ascii')
+                    version = v.decode('ascii').split('(')[0].split('.')
+                    self.server_version  = int(version[0]) * 10000
+                    if len(version) > 0:
+                        try:
+                            self.server_version += int(version[1]) * 100
+                        except:
+                            pass
+                    if len(version) > 1:
+                        try:
+                            self.server_version += int(version[2])
+                        except:
+                            pass
                 elif k == b'TimeZone':
                     self.tz_name = v.decode('ascii')
                     self.tzinfo = None
