@@ -1,15 +1,21 @@
 class Error(Exception):
     def __init__(self, *args):
+        super(Error, self).__init__(*args)
         if len(args) > 0:
             self.message = args[0]
         else:
             self.message = b'Database Error'
-        super(Error, self).__init__(*args)
+        if len(args) > 1:
+            self.code = args[1]
+        else:
+            self.code = None
 
     def __str__(self):
         return self.message
 
     def __repr__(self):
+        if self.code:
+            return self.code + ":" + self.message
         return self.message
 
 

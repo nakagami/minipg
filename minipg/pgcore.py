@@ -341,7 +341,7 @@ class Connection(object):
         self.encoding = 'UTF8'
         self.autocommit = False
         self.server_version = ''
-        self._ready_for_query = b'I'
+        self._trans_status = b'I'
         self.encoders = {}
         self.tz_name = None
         self.tzinfo = None
@@ -487,7 +487,7 @@ class Connection(object):
             ln = _bytes_to_bint(self._read(4)) - 4
             data = self._read(ln)
             if code == 90:
-                self._ready_for_query = data
+                self._trans_status = data
                 DEBUG_OUTPUT("-> ReadyForQuery('Z'):{}".format(data))
                 break
             elif code == 82:
@@ -690,9 +690,9 @@ class Connection(object):
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
                 message = message.decode(self.encoding)
                 if errcode[:2] == b'23':
-                    errobj = IntegrityError(message)
+                    errobj = IntegrityError(message, errcode)
                 else:
-                    errobj = DatabaseError(message)
+                    errobj = DatabaseError(message, errcode)
             elif code == 72:    # CopyOutputResponse('H')
                 pass
             elif code == 100:   # CopyData('d')
@@ -717,6 +717,7 @@ class Connection(object):
     def process_messages(self, obj):
         err = self._process_messages(obj)
         if err:
+            self._rollback()
             raise err
 
     def _read(self, ln):
