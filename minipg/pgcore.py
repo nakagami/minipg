@@ -717,7 +717,6 @@ class Connection(object):
     def process_messages(self, obj):
         err = self._process_messages(obj)
         if err:
-            self._rollback()
             raise err
 
     def _read(self, ln):
