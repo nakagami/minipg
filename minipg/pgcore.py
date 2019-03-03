@@ -835,7 +835,7 @@ class Connection(object):
 
     def _begin(self):
         self._send_message(b'Q', b"BEGIN\x00")
-        self._process_messages(None)
+        self.process_messages(None)
 
     def begin(self):
         if DEBUG:
