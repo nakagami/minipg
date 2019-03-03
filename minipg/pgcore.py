@@ -50,7 +50,7 @@ from .err import (
     NotSupportedError,
 )
 
-VERSION = (0, 7, 2)
+VERSION = (0, 7, 3)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
