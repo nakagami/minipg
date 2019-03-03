@@ -41,7 +41,7 @@ import base64
 import hmac
 from argparse import ArgumentParser
 
-from .err import (
+from . import (
     DatabaseError,
     InterfaceError,
     InternalError,
@@ -49,6 +49,7 @@ from .err import (
     IntegrityError,
     NotSupportedError,
 )
+
 
 VERSION = (0, 7, 3)
 __version__ = '%s.%s.%s' % VERSION
