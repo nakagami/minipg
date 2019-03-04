@@ -42,11 +42,13 @@ import hmac
 from argparse import ArgumentParser
 
 from . import (
-    DatabaseError,
     InterfaceError,
+    DatabaseError,
     InternalError,
     OperationalError,
+    ProgrammingError,
     IntegrityError,
+    DataError,
     NotSupportedError,
 )
 
@@ -472,6 +474,8 @@ class Connection(object):
             return (_parse_point(p), float(r))
         elif oid in (PG_TYPE_LSEG, PG_TYPE_PATH, PG_TYPE_BOX, PG_TYPE_POLYGON, PG_TYPE_LINE):
             return eval(data)
+        elif oid in (PG_TYPE_VOID, ):
+            return None
         else:
             if DEBUG:
                 raise ValueError('Unknown oid=' + str(oid) + ":" + data)
@@ -690,8 +694,36 @@ class Connection(object):
                 message = errcode + b':' + err[3][1:]
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
                 message = message.decode(self.encoding)
-                if errcode[:2] == b'23':
+                if errcode[:2] = b'0A':
+                    errobj = NotSupportedError(message, errcode)
+                elif errcode[:2] in (b'20', b'21'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:2] in (b'22', ):
+                    errobj = DataError(message, errcode)
+                elif errcode[:2] == b'23':
                     errobj = IntegrityError(message, errcode)
+                elif errcode[:2] in(b'24', b'25'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] in(b'26', b'27', b'28'):
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:2] in(b'2B', b'2D', b'2F'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] == b'34':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:2] in (b'38', b'39', b'3B'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] in (b'3D', b'3F'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:2] in (b'40', b'42', b'44'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:1] == b'5':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:1] in b'F':
+                    errobj = InternalError(message, errcode)
+                elif errcode[:1] in b'H':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:1] in (b'P', b'X'):
+                    errobj = InternalError(message, errcode)
                 else:
                     errobj = DatabaseError(message, errcode)
             elif code == 72:    # CopyOutputResponse('H')
