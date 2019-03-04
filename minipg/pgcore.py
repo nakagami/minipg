@@ -694,7 +694,7 @@ class Connection(object):
                 message = errcode + b':' + err[3][1:]
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
                 message = message.decode(self.encoding)
-                if errcode[:2] = b'0A':
+                if errcode[:2] == b'0A':
                     errobj = NotSupportedError(message, errcode)
                 elif errcode[:2] in (b'20', b'21'):
                     errobj = ProgrammingError(message, errcode)
