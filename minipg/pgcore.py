@@ -246,7 +246,6 @@ class Cursor(object):
     def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
             raise InterfaceError("Lost connection", "08003")
-
         self.description = []
         self._rows.clear()
         self.args = args
@@ -290,7 +289,7 @@ class Cursor(object):
 
     def fetchone(self):
         if not self.connection or not self.connection.is_connect():
-            raise InterfaceError("Lost connection", "80003")
+            raise InterfaceError("Lost connection", "08003")
         if len(self._rows):
             return self._rows.popleft()
         return None
@@ -765,11 +764,8 @@ class Connection(object):
         return r
 
     def _write(self, b):
-        if sys.platform == 'cli':
-            # A workaround for IronPython 2.7.5b2 problem
-            b = str(b)
         if not self.sock:
-            raise InterfaceError(u"Lost connection", "08003")
+            raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
             n += self.sock.send(b[n:])
@@ -795,7 +791,7 @@ class Connection(object):
         self._write(_bint_to_bytes(len(v) + 4) + v)
         self.process_messages(None)
 
-        self.begin()
+        self._begin()
 
         if self.tz_name and self.tzinfo is None:
             self.set_timezone(self.tz_name)
@@ -867,11 +863,14 @@ class Connection(object):
     def set_autocommit(self, autocommit):
         self.autocommit = autocommit
 
+    def _begin(self):
+        self._send_message(b'Q', b"BEGIN\x00")
+        self.process_messages(None)
+
     def begin(self):
         if DEBUG:
             DEBUG_OUTPUT('BEGIN')
-        self._send_message(b'Q', b"BEGIN\x00")
-        self.process_messages(None)
+        self._begin()
 
     def commit(self):
         if DEBUG:
@@ -879,14 +878,18 @@ class Connection(object):
         if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
-            self.begin()
+            self._begin()
+
+    def _rollback(self):
+        self._send_message(b'Q', b"ROLLBACK\x00")
+        self._process_messages(None)
 
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
-            self._send_message(b'Q', b"ROLLBACK\x00")
-            self.process_messages(None)
+            self._rollback()
+            self._begin()
 
     def reopen(self):
         self.close()
@@ -908,13 +911,13 @@ def connect(host, user, password='', database=None, port=None, timeout=None, use
 
 def create_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn.rollback()
+        conn._rollback()
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
 
 
 def drop_database(database, host, user, password='', port=None, use_ssl=False):
     with connect(host, user, password, None, port, None, use_ssl) as conn:
-        conn.rollback()
+        conn._rollback()
         conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
