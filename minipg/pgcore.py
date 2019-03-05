@@ -245,7 +245,8 @@ class Cursor(object):
 
     def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
-            raise InterfaceError(u"08003:Lost connection")
+            raise InterfaceError("Lost connection", "08003")
+
         self.description = []
         self._rows.clear()
         self.args = args
@@ -289,7 +290,7 @@ class Cursor(object):
 
     def fetchone(self):
         if not self.connection or not self.connection.is_connect():
-            raise InterfaceError(u"08003:Lost connection")
+            raise InterfaceError("Lost connection", "80003")
         if len(self._rows):
             return self._rows.popleft()
         return None
@@ -754,12 +755,12 @@ class Connection(object):
 
     def _read(self, ln):
         if not self.sock:
-            raise InterfaceError(u"08003:Lost connection")
+            raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
             b = self.sock.recv(ln-len(r))
             if not b:
-                raise InterfaceError(u"08003:Can't recv packets")
+                raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
@@ -768,7 +769,7 @@ class Connection(object):
             # A workaround for IronPython 2.7.5b2 problem
             b = str(b)
         if not self.sock:
-            raise InterfaceError(u"08003:Lost connection")
+            raise InterfaceError(u"Lost connection", "08003")
         n = 0
         while (n < len(b)):
             n += self.sock.send(b[n:])
