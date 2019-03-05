@@ -885,7 +885,7 @@ class Connection(object):
 
     def _rollback(self):
         self._send_message(b'Q', b"ROLLBACK\x00")
-        self.process_messages(None)
+        self._process_messages(None)
 
     def rollback(self):
         if DEBUG:
