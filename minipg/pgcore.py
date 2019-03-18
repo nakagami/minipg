@@ -753,6 +753,8 @@ class Connection(object):
 
     def process_messages(self, obj):
         err = self._process_messages(obj)
+        if self._trans_status == b'E':
+            self._begin()
         if err:
             raise err
 
@@ -869,7 +871,7 @@ class Connection(object):
 
     def _begin(self):
         self._send_message(b'Q', b"BEGIN\x00")
-        self.process_messages(None)
+        self._process_messages(None)
 
     def begin(self):
         if DEBUG:
