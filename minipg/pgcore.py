@@ -218,6 +218,10 @@ DATE = DBAPITypeObject(datetime.date)
 TIME = DBAPITypeObject(datetime.time)
 ROWID = DBAPITypeObject()
 
+Description = collections.namedtuple(
+    'Description',
+    ('name', 'type_code', 'display_size', 'internal_size', 'precision', 'scale', 'null_ok')
+)
 
 class Cursor(object):
     def __init__(self, connection):
@@ -660,7 +664,7 @@ class Connection(object):
 #                        size = _bytes_to_bint(data[n+10:n+12])
 #                        modifier = _bytes_to_bint(data[n+12:n+16])
 #                        format = _bytes_to_bint(data[n+16:n+18]),
-                    field = (name, type_code, None, size, precision, scale, None)
+                    field = Description(name, type_code, None, size, precision, scale, None)
                     n += 18
                     obj.description[idx] = field
                     idx += 1
