@@ -248,7 +248,6 @@ class Cursor(object):
         pass
 
     def execute(self, query, args=None):
-        print(query)
         if not self.connection or not self.connection.is_connect():
             raise InterfaceError("Lost connection", "08003")
         self.description = []
