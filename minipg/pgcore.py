@@ -39,6 +39,7 @@ import random
 import hashlib
 import base64
 import hmac
+import enum
 from argparse import ArgumentParser
 
 from . import (
@@ -801,6 +802,8 @@ class Connection(object):
             self.set_timezone(self.tz_name)
 
     def escape_parameter(self, v):
+        if isinstance(v, enum.Enum):
+            v = v.value
         t = type(v)
         func = self.encoders.get(t)
         if func:
