@@ -71,17 +71,17 @@ class PgTzinfo(datetime.tzinfo):
     def __init__(self, name=None, cur=None):
         if name is None or cur is None:
             self._offset = datetime.timedelta(0)
-            self._name = 'UTC'
+            self.zone = 'UTC'
         else:
             cur.execute('SELECT utc_offset FROM pg_timezone_names WHERE name=%s', name)
             self._offset = cur.fetchone()[0]
-            self._name = name
+            self.zone = name
 
     def utcoffset(self, dt):
         return self._offset
 
     def tzname(self, dt):
-        return self._name
+        return self.zone
 
     def dst(self, dt):
         return datetime.timedelta(0)
