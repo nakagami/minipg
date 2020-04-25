@@ -4,8 +4,6 @@ minipg
 
 Yet another Python PostgreSQL database driver.
 
-Pure python or Cython http://cython.org/ accelaleted.
-
 Requirements
 -----------------
 
@@ -35,29 +33,6 @@ Query::
       print(r[0], r[1])
    conn.close()
 
-COPY TO::
-
-   import minipg
-   conn = minipg.connect(host='localhost',
-                       user='postgres',
-                       password='secret',
-                       database='database_name')
-   f = open('foo.txt', 'bw')
-   conn.execute('COPY foo_table TO stdout', f)
-   f.close()
-   conn.close()
-
-COPY FROM::
-
-   import minipg
-   conn = minipg.connect(host='localhost',
-                       user='postgres',
-                       password='secret',
-                       database='database_name')
-   f = open('foo.txt', 'br')
-   conn.execute('COPY foo_table FROM stdin', f)
-   f.close()
-   conn.close()
 
 As sqlalchemy dialect::
 
