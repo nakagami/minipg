@@ -54,7 +54,7 @@ from . import (
 )
 
 
-VERSION = (0, 7, 6)
+VERSION = (0, 7, 7)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
