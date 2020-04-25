@@ -858,10 +858,14 @@ class Connection(object):
             return cur.fetchone()[0]
 
     def set_timezone(self, timezone_name):
+        self.tz_name = timezone_name
         with self.cursor() as cur:
-            cur.execute("SET TIME ZONE %s",  [timezone_name])
-            self.tz_name = timezone_name
-            self.tzinfo = PgTzinfo(self.tz_name, cur)
+            cur.execute("SET TIME ZONE %s",  [self.tz_name])
+            try:
+                import pytz
+                self.tzinfo = pytz.timezone(self.tz_name)
+            except ImportError:
+                self.tzinfo = PgTzinfo(self.tz_name, cur)
 
     @property
     def isolation_level(self):
