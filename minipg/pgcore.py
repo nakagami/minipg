@@ -696,9 +696,9 @@ class Connection(object):
                 err = data.split(b'\x00')
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
                 errcode = err[2][1:]
-                message = errcode + b':' + err[3][1:]
+                message = "{}:{}".format(self.query, err[3][1:].decode(self.encoding))
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
-                message = message.decode(self.encoding)
+
                 if errcode[:2] == b'0A':
                     errobj = NotSupportedError(message, errcode)
                 elif errcode[:2] in (b'20', b'21'):
@@ -843,14 +843,12 @@ class Connection(object):
     def cursor(self, factory=Cursor):
         return factory(self)
 
-    def _execute(self, query, obj):
+    def execute(self, query, obj=None):
+        self.query = query
         self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
             self.commit()
-
-    def execute(self, query, obj=None):
-        self._execute(query, obj)
 
     def get_parameter_status(self, s):
         with self.cursor() as cur:

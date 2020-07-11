@@ -6,7 +6,7 @@ class Error(Exception):
         else:
             self.message = b'Database Error'
         if len(args) > 1:
-            self.code = args[1]
+            self.code = args[1].decode('utf-8')
         else:
             self.code = ''
 

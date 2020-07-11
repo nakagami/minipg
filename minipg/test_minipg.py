@@ -103,7 +103,7 @@ class TestMiniPG(unittest.TestCase):
         try:
             cur.execute("E")
         except minipg.DatabaseError as e:
-            self.assertFalse(str(e).find(u'42601') < 0)
+            self.assertEqual(e.code, '42601')
             self.connection.rollback()
         self.connection.execute("select * from test_basic")
 
