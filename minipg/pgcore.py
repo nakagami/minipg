@@ -695,39 +695,39 @@ class Connection(object):
             elif code == 69 and not errobj:
                 err = data.split(b'\x00')
                 # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
-                errcode = err[2][1:]
+                errcode = err[2][1:].decode('utf-8')
                 message = "{}:{}".format(self.query, err[3][1:].decode(self.encoding))
                 DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
 
-                if errcode[:2] == b'0A':
+                if errcode[:2] == '0A':
                     errobj = NotSupportedError(message, errcode)
-                elif errcode[:2] in (b'20', b'21'):
+                elif errcode[:2] in ('20', '21'):
                     errobj = ProgrammingError(message, errcode)
-                elif errcode[:2] in (b'22', ):
+                elif errcode[:2] in ('22', ):
                     errobj = DataError(message, errcode)
-                elif errcode[:2] == b'23':
+                elif errcode[:2] == '23':
                     errobj = IntegrityError(message, errcode)
-                elif errcode[:2] in(b'24', b'25'):
+                elif errcode[:2] in('24', '25'):
                     errobj = InternalError(message, errcode)
-                elif errcode[:2] in(b'26', b'27', b'28'):
+                elif errcode[:2] in('26', '27', '28'):
                     errobj = OperationalError(message, errcode)
-                elif errcode[:2] in(b'2B', b'2D', b'2F'):
+                elif errcode[:2] in('2B', '2D', '2F'):
                     errobj = InternalError(message, errcode)
-                elif errcode[:2] == b'34':
+                elif errcode[:2] == '34':
                     errobj = OperationalError(message, errcode)
-                elif errcode[:2] in (b'38', b'39', b'3B'):
+                elif errcode[:2] in ('38', '39', '3B'):
                     errobj = InternalError(message, errcode)
-                elif errcode[:2] in (b'3D', b'3F'):
+                elif errcode[:2] in ('3D', '3F'):
                     errobj = ProgrammingError(message, errcode)
-                elif errcode[:2] in (b'40', b'42', b'44'):
+                elif errcode[:2] in ('40', '42', '44'):
                     errobj = ProgrammingError(message, errcode)
-                elif errcode[:1] == b'5':
+                elif errcode[:1] == '5':
                     errobj = OperationalError(message, errcode)
-                elif errcode[:1] in b'F':
+                elif errcode[:1] in 'F':
                     errobj = InternalError(message, errcode)
-                elif errcode[:1] in b'H':
+                elif errcode[:1] in 'H':
                     errobj = OperationalError(message, errcode)
-                elif errcode[:1] in (b'P', b'X'):
+                elif errcode[:1] in ('P', 'X'):
                     errobj = InternalError(message, errcode)
                 else:
                     errobj = DatabaseError(message, errcode)

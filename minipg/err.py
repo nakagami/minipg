@@ -4,9 +4,9 @@ class Error(Exception):
         if len(args) > 0:
             self.message = args[0]
         else:
-            self.message = b'Database Error'
+            self.message = 'Database Error'
         if len(args) > 1:
-            self.code = args[1].decode('utf-8')
+            self.code = args[1]
         else:
             self.code = ''
 
