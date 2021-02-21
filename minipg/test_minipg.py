@@ -33,7 +33,7 @@ import minipg
 class TestMiniPG(unittest.TestCase):
     host = 'localhost'
     user = 'postgres'
-    password = ''
+    password = 'password'
     database = 'test_minipg'
 
     def setUp(self):
