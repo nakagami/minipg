@@ -74,11 +74,6 @@ class _PGHStore(HSTORE):
         if not dialect.has_native_hstore:
             return super(_PGHStore, self).result_processor(dialect, coltype)
 
-    def result_processor(self, dialect, coltype):
-        if not dialect.has_native_json:
-            return super(_PGJSONB, self).result_processor(dialect, coltype)
-
-
 
 class _PGCompiler(PGCompiler):
 
