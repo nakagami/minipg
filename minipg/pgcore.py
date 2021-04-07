@@ -33,7 +33,6 @@ import time
 import uuid
 import collections
 import binascii
-import json
 import re
 import random
 import hashlib
@@ -452,10 +451,8 @@ class Connection(object):
             hex_str = data[2:]
             ia = [int(hex_str[i:i+2], 16) for i in range(0, len(hex_str), 2)]
             return bytes(ia)
-        elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_XML):
+        elif oid in (PG_TYPE_CHAR, PG_TYPE_TEXT, PG_TYPE_BPCHAR, PG_TYPE_VARCHAR, PG_TYPE_NAME, PG_TYPE_JSONBOID, PG_TYPE_XML):
             return data
-        elif oid in (PG_TYPE_JSON, PG_TYPE_JSONBOID):
-            return json.loads(data)
         elif oid in (PG_TYPE_UUID, ):
             return uuid.UUID(data)
         elif oid in (PG_TYPE_UNKNOWN, PG_TYPE_PGNODETREE, PG_TYPE_TSVECTOR, PG_TYPE_INET):
