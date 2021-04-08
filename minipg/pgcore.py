@@ -1,7 +1,7 @@
 ##############################################################################
 #The MIT License (MIT)
 #
-#Copyright (c) 2014-2018 Hajime Nakagami
+#Copyright (c) 2014-2021 Hajime Nakagami
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,7 @@ from . import (
 )
 
 
-VERSION = (0, 7, 7)
+VERSION = (0, 8, 0)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
