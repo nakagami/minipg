@@ -39,6 +39,13 @@ import hashlib
 import base64
 import hmac
 import enum
+try:
+    import zoneinfo
+except ImportError:
+    # https://pypi.org/project/backports.zoneinfo/
+    from backports import zoneinfo
+return zoneinfo.ZoneInfo(name)
+
 
 from . import (
     InterfaceError,
@@ -58,26 +65,6 @@ DEBUG = False
 def DEBUG_OUTPUT(s):
     if DEBUG:
         print(s, end=' \n', file=sys.stderr)
-
-
-class PgTzinfo(datetime.tzinfo):
-    def __init__(self, name=None, cur=None):
-        if name is None or cur is None:
-            self._offset = datetime.timedelta(0)
-            self.zone = 'UTC'
-        else:
-            cur.execute('SELECT utc_offset FROM pg_timezone_names WHERE name=%s', name)
-            self._offset = cur.fetchone()[0]
-            self.zone = name
-
-    def utcoffset(self, dt):
-        return self._offset
-
-    def tzname(self, dt):
-        return self.zone
-
-    def dst(self, dt):
-        return datetime.timedelta(0)
 
 
 # -----------------------------------------------------------------------------
@@ -853,11 +840,7 @@ class Connection(object):
         self.tz_name = timezone_name
         with self.cursor() as cur:
             cur.execute("SET TIME ZONE %s",  [self.tz_name])
-            try:
-                import pytz
-                self.tzinfo = pytz.timezone(self.tz_name)
-            except ImportError:
-                self.tzinfo = PgTzinfo(self.tz_name, cur)
+            self.tzinfo = zoneinfo.ZoneInfo(self.tz_name)
 
     @property
     def isolation_level(self):
