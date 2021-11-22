@@ -39,7 +39,6 @@ import hashlib
 import base64
 import hmac
 import enum
-from argparse import ArgumentParser
 
 from . import (
     InterfaceError,
@@ -53,18 +52,13 @@ from . import (
 )
 
 
-VERSION = (0, 8, 0)
-__version__ = '%s.%s.%s' % VERSION
-apilevel = '2.0'
-threadsafety = 1
-paramstyle = 'format'
-
 DEBUG = False
 
 
 def DEBUG_OUTPUT(s):
     if DEBUG:
         print(s, end=' \n', file=sys.stderr)
+
 
 class PgTzinfo(datetime.tzinfo):
     def __init__(self, name=None, cur=None):
@@ -86,7 +80,7 @@ class PgTzinfo(datetime.tzinfo):
         return datetime.timedelta(0)
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # http://www.postgresql.org/docs/9.6/static/protocol.html
 # http://www.postgresql.org/docs/9.6/static/protocol-message-formats.html
 
@@ -187,6 +181,7 @@ def _bytes_to_bint(b):     # Read as big endian
 def _bint_to_bytes(val):    # Convert int value to big endian 4 bytes.
     return val.to_bytes(4, byteorder='big')
 
+
 Date = datetime.date
 Time = datetime.time
 TimeDelta = datetime.timedelta
@@ -222,6 +217,7 @@ Description = collections.namedtuple(
     'Description',
     ('name', 'type_code', 'display_size', 'internal_size', 'precision', 'scale', 'null_ok')
 )
+
 
 class Cursor(object):
     def __init__(self, connection):
@@ -281,7 +277,7 @@ class Cursor(object):
                 }
             else:
                 escaped_args = self.connection.escape_parameter(args)
-        self.query = 'select * from ' + proc_name + '(' +  ','.join(escaped_args) + ')'
+        self.query = 'select * from ' + proc_name + '(' + ','.join(escaped_args) + ')'
         self.connection.execute(self.query, self)
 
     def executemany(self, query, seq_of_params):
@@ -575,7 +571,8 @@ class Connection(object):
                     proof = base64.standard_b64encode(
                         b"".join([bytes([x ^ y]) for x, y in zip(client_key, client_sig)])
                     )
-                    self._send_data(b'p',
+                    self._send_data(
+                        b'p',
                         (client_final_message_without_proof + ",p=").encode('utf-8') + proof
                     )
 
@@ -600,16 +597,16 @@ class Connection(object):
                     self.encoding = v.decode('ascii')
                 elif k == b'server_version':
                     version = v.decode('ascii').split('(')[0].split('.')
-                    self.server_version  = int(version[0]) * 10000
+                    self.server_version = int(version[0]) * 10000
                     if len(version) > 0:
                         try:
                             self.server_version += int(version[1]) * 100
-                        except:
+                        except Exception:
                             pass
                     if len(version) > 1:
                         try:
                             self.server_version += int(version[2])
-                        except:
+                        except Exception:
                             pass
                 elif k == b'TimeZone':
                     self.tz_name = v.decode('ascii')

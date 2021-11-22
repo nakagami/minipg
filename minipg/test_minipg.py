@@ -39,7 +39,7 @@ class TestMiniPG(unittest.TestCase):
     def setUp(self):
         try:
             minipg.create_database(self.database, self.host, self.user, self.password)
-        except:
+        except Exception:
             pass
         self.connection = minipg.connect(
             host=self.host,
@@ -196,7 +196,7 @@ class TestMiniPG(unittest.TestCase):
         cur = self.connection.cursor()
         try:
             cur.execute("drop table test_copy")
-        except:
+        except Exception:
             self.connection.rollback()
 
         cur.execute("""
@@ -284,6 +284,7 @@ class TestMiniPG(unittest.TestCase):
 
     def test_isolation_level(self):
         self.assertEqual(self.connection.isolation_level, u'read committed')
+
 
 if __name__ == "__main__":
     unittest.main()
