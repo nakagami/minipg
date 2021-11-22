@@ -44,7 +44,6 @@ try:
 except ImportError:
     # https://pypi.org/project/backports.zoneinfo/
     from backports import zoneinfo
-return zoneinfo.ZoneInfo(name)
 
 
 from . import (
