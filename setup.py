@@ -1,14 +1,5 @@
 import sys
-from distutils.core import setup, Command
-from distutils.extension import Extension
-
-try:
-    from Cython.Build import cythonize
-    ext_modules = cythonize([
-        Extension("minipg.pgcore", ["minipg/pgcore.py"]),
-    ])
-except ImportError:
-    ext_modules = None
+from setuptools import setup, Command
 
 
 class TestCommand(Command):
@@ -51,5 +42,4 @@ setup(
     license="MIT",
     packages=['minipg'],
     cmdclass=cmdclass,
-    ext_modules=ext_modules,
 )
