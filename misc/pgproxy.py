@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 ##############################################################################
-#The MIT License (MIT)
+# The MIT License (MIT)
 #
-#Copyright (c) 2016 Hajime Nakagami
+# Copyright (c) 2016 Hajime Nakagami
 #
-#Permission is hereby granted, free of charge, to any person obtaining a copy
-#of this software and associated documentation files (the "Software"), to deal
-#in the Software without restriction, including without limitation the rights
-#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the Software is
-#furnished to do so, subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-#The above copyright notice and this permission notice shall be included in all
-#copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#SOFTWARE.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 ##############################################################################
 import sys
 import socket
 import binascii
+
 
 def recv_from_sock(sock, nbytes):
     n = nbytes
@@ -35,6 +36,7 @@ def recv_from_sock(sock, nbytes):
         n -= len(bs)
     return recieved
 
+
 def asc_dump(s):
     r = ''
     for c in s:
@@ -42,10 +44,11 @@ def asc_dump(s):
     if r:
         print('[' + r + ']')
 
+
 def _recv_from_server(server_sock):
     server_head = recv_from_sock(server_sock, 5)
     server_code = server_head[0]
-    server_ln = int.from_bytes(server_head[1:], byteorder='big') -4
+    server_ln = int.from_bytes(server_head[1:], byteorder='big') - 4
     server_data = recv_from_sock(server_sock, server_ln)
     print('S->C', chr(server_code), binascii.b2a_hex(server_data).decode('ascii'), end='')
     asc_dump(server_data)
@@ -74,6 +77,7 @@ def parse_message(server_sock, client_sock):
         client_sock.send(server_head + server_data)
         if server_head[0] == 90:
             break
+
 
 def read_login_packet(sock):
     head = recv_from_sock(sock, 4)
@@ -124,6 +128,7 @@ def parse_login_response(server_sock, client_sock):
         assert int.from_bytes(server_data[:4], byteorder='big') == 0
         client_sock.send(server_head + server_data)
 
+
 def proxy_wire(server_name, server_port, listen_host, listen_port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((listen_host, listen_port))
@@ -148,6 +153,7 @@ def proxy_wire(server_name, server_port, listen_host, listen_port):
         _recv_from_client_tail(server_sock, client_sock)
 
         parse_message(server_sock, client_sock)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
