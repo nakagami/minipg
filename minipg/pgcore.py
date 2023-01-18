@@ -687,11 +687,11 @@ class Connection(object):
                     errobj = DataError(message, errcode)
                 elif errcode[:2] == '23':
                     errobj = IntegrityError(message, errcode)
-                elif errcode[:2] in('24', '25'):
+                elif errcode[:2] in ('24', '25'):
                     errobj = InternalError(message, errcode)
-                elif errcode[:2] in('26', '27', '28'):
+                elif errcode[:2] in ('26', '27', '28'):
                     errobj = OperationalError(message, errcode)
-                elif errcode[:2] in('2B', '2D', '2F'):
+                elif errcode[:2] in ('2B', '2D', '2F'):
                     errobj = InternalError(message, errcode)
                 elif errcode[:2] == '34':
                     errobj = OperationalError(message, errcode)
