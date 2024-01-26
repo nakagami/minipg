@@ -37,7 +37,6 @@ Query::
 Restrictions and Unsupported Features
 --------------------------------------
 
-- Python 3.6, 3.7, 3.8 requires backports.zoneinfo https://pypi.org/project/backports.zoneinfo/ install
 - Supported Authentication METHOD are only 'trust', 'md5' and 'scram-sha-256'.
 - Not full support for array data types.
 - Not support for prepared statements.
