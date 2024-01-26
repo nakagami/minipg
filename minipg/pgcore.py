@@ -763,7 +763,10 @@ class Connection(object):
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                self.sock = ssl.wrap_socket(self.sock)
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                self.sock = context.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
