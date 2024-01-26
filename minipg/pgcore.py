@@ -497,7 +497,7 @@ class Connection(object):
                     data = self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 elif auth_method == 10:   # SASL
-                    assert data[4:-2].decode('utf-8') == 'SCRAM-SHA-256'
+                    assert b'SCRAM-SHA-256\x00\x00' in data
                     printable = string.ascii_letters + string.digits + '+/'
                     client_nonce = ''.join(
                         printable[random.randrange(0, len(printable))]
