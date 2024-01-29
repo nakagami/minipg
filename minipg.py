@@ -39,6 +39,7 @@ import base64
 import hmac
 import enum
 import zoneinfo
+import ssl
 
 
 DEBUG = False
@@ -368,14 +369,14 @@ class Cursor(object):
 
 
 class Connection(object):
-    def __init__(self, user, password, database, host, port, timeout, use_ssl):
+    def __init__(self, user, password, database, host, port, timeout, ssl_context):
         self.user = user
         self.password = password
         self.database = database
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.use_ssl = use_ssl
+        self.ssl_context = ssl_context
         self.encoding = 'UTF8'
         self.autocommit = False
         self.server_version = ''
@@ -807,15 +808,11 @@ class Connection(object):
     def _open(self):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
-        if self.use_ssl:
-            import ssl
+        if self.ssl_context:
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-                context.check_hostname = False
-                context.verify_mode = ssl.CERT_NONE
-                self.sock = context.wrap_socket(self.sock)
+                self.sock = self.ssl_context.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
@@ -942,19 +939,19 @@ class Connection(object):
             self.sock = None
 
 
-def connect(host, user, password='', database=None, port=None, timeout=None, use_ssl=False):
-    return Connection(user, password, database, host, port if port else 5432, timeout, use_ssl)
+def connect(host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
+    return Connection(user, password, database, host, port if port else 5432, timeout, ssl_context)
 
 
-def create_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
+def create_database(database, host, user, password='', port=None, ssl_context=None):
+    with connect(host, user, password, None, port, None, ssl_context) as conn:
         conn._rollback()
         conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
 
 
-def drop_database(database, host, user, password='', port=None, use_ssl=False):
-    with connect(host, user, password, None, port, None, use_ssl) as conn:
+def drop_database(database, host, user, password='', port=None, ssl_context=False):
+    with connect(host, user, password, None, port, None, ssl_context) as conn:
         conn._rollback()
         conn._send_message(b'Q', 'DROP DATABASE {}'.format(database).encode('utf-8') + b'\x00')
         conn.process_messages(None)
