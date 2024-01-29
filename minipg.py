@@ -39,7 +39,6 @@ import base64
 import hmac
 import enum
 import zoneinfo
-import ssl
 
 
 DEBUG = False
