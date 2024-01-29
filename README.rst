@@ -29,7 +29,7 @@ copy a module file.
 Example
 -----------------
 
-Query::
+::
 
    import minipg
    conn = minipg.connect(host='localhost',
@@ -41,6 +41,25 @@ Query::
    for r in cur.fetchall():
       print(r[0], r[1])
    conn.close()
+
+SSL Connection
+++++++++++++++++++
+
+You can make an SSL connection with an instance of SSLContext.
+Below is an example of an ssl connection without certificate validation.
+
+::
+
+   import ssl
+   import minipg
+   ssl_context = ssl.create_default_context()
+   ssl_context.check_hostname = False
+   ssl_context.verify_mode = ssl.CERT_NONE
+   conn = minipg.connect(host='localhost',
+                       user='postgres',
+                       password='secret',
+                       database='database_name',
+                       ssl_context=ssl_context)
 
 
 Restrictions and Unsupported Features
