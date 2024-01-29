@@ -13,9 +13,18 @@ Requirements
 Installation
 -----------------
 
+use pip
 ::
 
     $ pip install minipg
+
+or
+
+copy a module file.
+::
+
+    $ cd $(SOMEWHERE_PYTHON_PATH)
+    $ wget https://github.com/nakagami/minipg/raw/master/minipg.py
 
 Example
 -----------------
