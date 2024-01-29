@@ -1,5 +1,4 @@
-import sys
-from setuptools import setup, Command
+from setuptools import setup
 
 
 version = "%d.%d.%d" % __import__('minipg').VERSION
