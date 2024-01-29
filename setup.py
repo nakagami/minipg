@@ -40,6 +40,6 @@ setup(
     description='Yet another PostgreSQL database driver',
     long_description=open('README.rst').read(),
     license="MIT",
-    packages=['minipg'],
+    py_modules=['minipg'],
     cmdclass=cmdclass,
 )

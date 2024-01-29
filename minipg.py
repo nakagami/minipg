@@ -38,26 +38,76 @@ import hashlib
 import base64
 import hmac
 import enum
-try:
-    import zoneinfo
-except ImportError:
-    # https://pypi.org/project/backports.zoneinfo/
-    from backports import zoneinfo
-
-
-from . import (
-    InterfaceError,
-    DatabaseError,
-    InternalError,
-    OperationalError,
-    ProgrammingError,
-    IntegrityError,
-    DataError,
-    NotSupportedError,
-)
+import zoneinfo
 
 
 DEBUG = False
+
+VERSION = (0, 8, 1)
+__version__ = '%s.%s.%s' % VERSION
+apilevel = '2.0'
+threadsafety = 1
+paramstyle = 'format'
+
+
+class Error(Exception):
+    def __init__(self, *args):
+        super(Error, self).__init__(*args)
+        if len(args) > 0:
+            self.message = args[0]
+        else:
+            self.message = 'Database Error'
+        if len(args) > 1:
+            self.code = args[1]
+        else:
+            self.code = ''
+
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return self.code + ":" + self.message
+
+
+class Warning(Exception):
+    pass
+
+
+class InterfaceError(Error):
+    pass
+
+
+class DatabaseError(Error):
+    pass
+
+
+class DisconnectByPeer(Warning):
+    pass
+
+
+class InternalError(DatabaseError):
+    pass
+
+
+class OperationalError(DatabaseError):
+    pass
+
+
+class ProgrammingError(DatabaseError):
+    pass
+
+
+class IntegrityError(DatabaseError):
+    pass
+
+
+class DataError(DatabaseError):
+    pass
+
+
+class NotSupportedError(DatabaseError):
+    def __init__(self):
+        DatabaseError.__init__(self, 'NotSupportedError')
 
 
 def DEBUG_OUTPUT(s):
@@ -496,7 +546,7 @@ class Connection(object):
                     data = self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 elif auth_method == 10:   # SASL
-                    assert b'SCRAM-SHA-256\x00\x00' in data
+                    assert b'SCRAM-SHA-256\x00' in data
                     printable = string.ascii_letters + string.digits + '+/'
                     client_nonce = ''.join(
                         printable[random.randrange(0, len(printable))]
