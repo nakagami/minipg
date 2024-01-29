@@ -43,7 +43,7 @@ import zoneinfo
 
 DEBUG = False
 
-VERSION = (0, 8, 1)
+VERSION = (0, 9, 0)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
