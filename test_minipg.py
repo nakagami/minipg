@@ -23,11 +23,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##############################################################################
+import os
 import unittest
 import io
 import decimal
 import datetime
 import minipg
+import ssl
 
 
 class TestMiniPG(unittest.TestCase):
@@ -41,11 +43,18 @@ class TestMiniPG(unittest.TestCase):
             minipg.create_database(self.database, self.host, self.user, self.password)
         except Exception:
             pass
+        if not os.environ.get("GITHUB_ACTIONS"):
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context = None
         self.connection = minipg.connect(
             host=self.host,
             user=self.user,
             password=self.password,
             database=self.database,
+            ssl_context=ssl_context,
         )
 
     def tearDown(self):
