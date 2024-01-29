@@ -2,22 +2,6 @@ import sys
 from setuptools import setup, Command
 
 
-class TestCommand(Command):
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        from minipg import test_minipg
-        import unittest
-        unittest.main(test_minipg, argv=sys.argv[:1])
-
-cmdclass = {'test': TestCommand}
-
 version = "%d.%d.%d" % __import__('minipg').VERSION
 
 classifiers = [
@@ -41,5 +25,4 @@ setup(
     long_description=open('README.rst').read(),
     license="MIT",
     py_modules=['minipg'],
-    cmdclass=cmdclass,
 )
