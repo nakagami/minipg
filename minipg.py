@@ -554,12 +554,13 @@ class Connection(object):
                     )
 
                     # send client first message
-                    first_message = 'n,,n=,r=' + client_nonce
+                    client_first_message = 'n,,n=,r=' + client_nonce
                     self._send_data(b'p', b''.join([
                         b'SCRAM-SHA-256\x00',
-                        _bint_to_bytes(len(first_message)),
-                        first_message.encode('utf-8')
+                        _bint_to_bytes(len(client_first_message)),
+                        client_first_message.encode('utf-8')
                     ]))
+                    DEBUG_OUTPUT(f"client_first:{client_first_message}")
 
                     code = ord(self._read(1))
                     assert code == 82
@@ -567,6 +568,7 @@ class Connection(object):
                     data = self._read(ln)
                     _bytes_to_bint(data[:4]) == 11      # SCRAM first
 
+                    # recv server first message
                     server = {
                         kv[0]: kv[2:]
                         for kv in data[4:].decode('utf-8').split(',')
@@ -575,6 +577,7 @@ class Connection(object):
                     # s: servre salt
                     # i: iteration count
                     assert server['r'][:len(client_nonce)] == client_nonce
+                    DEBUG_OUTPUT(f"servre_first:{server}")
 
                     # send client final message
                     salted_pass = hashlib.pbkdf2_hmac(
@@ -605,10 +608,12 @@ class Connection(object):
 
                     proof = base64.standard_b64encode(
                         b"".join([bytes([x ^ y]) for x, y in zip(client_key, client_sig)])
-                    )
+                    ).decode('utf-8')
+                    client_final_message = client_final_message_without_proof + ",p=" + proof
+                    DEBUG_OUTPUT(f"client_final:{client_final_message}")
                     self._send_data(
                         b'p',
-                        (client_final_message_without_proof + ",p=").encode('utf-8') + proof
+                        client_final_message.encode('utf-8')
                     )
 
                     code = ord(self._read(1))
