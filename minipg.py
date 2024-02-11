@@ -39,6 +39,7 @@ import base64
 import hmac
 import enum
 import zoneinfo
+import json
 
 
 DEBUG = False
@@ -507,6 +508,8 @@ class Connection(object):
             return (_parse_point(p), float(r))
         elif oid in (PG_TYPE_LSEG, PG_TYPE_PATH, PG_TYPE_BOX, PG_TYPE_POLYGON, PG_TYPE_LINE):
             return eval(data)
+        elif oid in (PG_TYPE_JSON, ):
+            return json.loads(data)
         elif oid in (PG_TYPE_VOID, ):
             return None
         else:
