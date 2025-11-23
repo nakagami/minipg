@@ -1,7 +1,7 @@
 ##############################################################################
 # The MIT License (MIT)
 #
-# Copyright (c) 2014-2024 Hajime Nakagami
+# Copyright (c) 2014-2025 Hajime Nakagami
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -368,7 +368,7 @@ class Cursor(object):
         return self.__next__()
 
 
-class Connection(object):
+class BaseConnection(object):
     def __init__(self, user, password, database, host, port, timeout, ssl_context):
         self.user = user
         self.password = password
@@ -384,6 +384,11 @@ class Connection(object):
         self.encoders = {}
         self.tz_name = None
         self.tzinfo = None
+
+
+class Connection(BaseConnection):
+    def __init__(self, user, password, database, host, port, timeout, ssl_context):
+        super().__init__(user, password, database, host, port, timeout, ssl_context)
         self._open()
 
     def __enter__(self):
