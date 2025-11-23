@@ -385,26 +385,6 @@ class BaseConnection(object):
         self.tz_name = None
         self.tzinfo = None
 
-
-class Connection(BaseConnection):
-    def __init__(self, user, password, database, host, port, timeout, ssl_context):
-        super().__init__(user, password, database, host, port, timeout, ssl_context)
-        self._open()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc, value, traceback):
-        self.close()
-
-    def _send_data(self, message, data):
-        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
-
-    def _send_message(self, message, data):
-        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
-
     def _decode_column(self, data, oid):
         def _trim_timezone_offset(data):
             n = data.rfind('+')
@@ -521,6 +501,61 @@ class Connection(BaseConnection):
             if DEBUG:
                 raise ValueError('Unknown oid=' + str(oid) + ":" + data)
         return data
+
+    def escape_parameter(self, v):
+        if isinstance(v, enum.Enum):
+            v = v.value
+        t = type(v)
+        func = self.encoders.get(t)
+        if func:
+            return func(self, v)
+        if v is None:
+            return 'NULL'
+        elif t == str:
+            return u"'" + v.replace(u"'", u"''") + u"'"
+        elif t == bytearray or t == bytes:        # binary
+            return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
+        elif t == bool:
+            return u"TRUE" if v else u"FALSE"
+        elif t == time.struct_time:
+            return u'%04d-%02d-%02d %02d:%02d:%02d' % (
+                v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
+        elif t == datetime.datetime:
+            if v.tzinfo:
+                return "timestamp with time zone '" + v.isoformat() + "'"
+            else:
+                return "timestamp '" + v.isoformat() + "'"
+        elif t == datetime.date:
+            return "date '" + str(v) + "'"
+        elif t == datetime.timedelta:
+            return u"interval '" + str(v) + "'"
+        elif t == int or t == float:
+            return str(v)
+        elif t == decimal.Decimal:
+            return "decimal '" + str(v) + "'"
+        elif t == list or t == tuple:
+            return u'ARRAY[' + u','.join([self.escape_parameter(e) for e in v]) + u']'
+        else:
+            return "'" + str(v) + "'"
+
+class Connection(BaseConnection):
+    def __init__(self, user, password, database, host, port, timeout, ssl_context):
+        super().__init__(user, password, database, host, port, timeout, ssl_context)
+        self._open()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc, value, traceback):
+        self.close()
+
+    def _send_data(self, message, data):
+        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
+        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
+
+    def _send_message(self, message, data):
+        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
+        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
     def _process_messages(self, obj):
         errobj = None
@@ -842,41 +877,6 @@ class Connection(BaseConnection):
         if self.tz_name and self.tzinfo is None:
             self.set_timezone(self.tz_name)
 
-    def escape_parameter(self, v):
-        if isinstance(v, enum.Enum):
-            v = v.value
-        t = type(v)
-        func = self.encoders.get(t)
-        if func:
-            return func(self, v)
-        if v is None:
-            return 'NULL'
-        elif t == str:
-            return u"'" + v.replace(u"'", u"''") + u"'"
-        elif t == bytearray or t == bytes:        # binary
-            return "'" + ''.join(['\\%03o' % (c, ) for c in v]) + "'::bytea"
-        elif t == bool:
-            return u"TRUE" if v else u"FALSE"
-        elif t == time.struct_time:
-            return u'%04d-%02d-%02d %02d:%02d:%02d' % (
-                v.tm_year, v.tm_mon, v.tm_mday, v.tm_hour, v.tm_min, v.tm_sec)
-        elif t == datetime.datetime:
-            if v.tzinfo:
-                return "timestamp with time zone '" + v.isoformat() + "'"
-            else:
-                return "timestamp '" + v.isoformat() + "'"
-        elif t == datetime.date:
-            return "date '" + str(v) + "'"
-        elif t == datetime.timedelta:
-            return u"interval '" + str(v) + "'"
-        elif t == int or t == float:
-            return str(v)
-        elif t == decimal.Decimal:
-            return "decimal '" + str(v) + "'"
-        elif t == list or t == tuple:
-            return u'ARRAY[' + u','.join([self.escape_parameter(e) for e in v]) + u']'
-        else:
-            return "'" + str(v) + "'"
 
     def is_connect(self):
         return bool(self.sock)
