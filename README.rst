@@ -67,7 +67,6 @@ Restrictions and Unsupported Features
 
 - Supported Authentication METHOD are only 'trust', 'md5' and 'scram-sha-256'.
 - Not full support for array data types.
-- Not support for prepared statements.
 
 For MicroPython
 ----------------
