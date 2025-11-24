@@ -255,7 +255,7 @@ Description = collections.namedtuple(
 )
 
 
-class Cursor(object):
+class BaseCursor(object):
     def __init__(self, connection):
         self.connection = connection
         self.description = []
@@ -264,6 +264,52 @@ class Cursor(object):
         self.arraysize = 1
         self.query = None
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        r = self.fetchone()
+        if not r:
+            raise StopIteration()
+        return r
+
+    def next(self):
+        return self.__next__()
+
+    def fetchone(self):
+        if not self.connection or not self.connection.is_connect():
+            raise InterfaceError("Lost connection", "08003")
+        if len(self._rows):
+            return self._rows.popleft()
+        return None
+
+    def fetchmany(self, size=1):
+        rs = []
+        for i in range(size):
+            r = self.fetchone()
+            if not r:
+                break
+            rs.append(r)
+        return rs
+
+    def fetchall(self):
+        r = list(self._rows)
+        self._rows.clear()
+        return r
+
+    def close(self):
+        self.connection = None
+
+    @property
+    def rowcount(self):
+        return self._rowcount
+
+    @property
+    def closed(self):
+        return self.connection is None or not self.connection.is_connect()
+
+
+class Cursor(BaseCursor):
     def __enter__(self):
         return self
 
@@ -322,50 +368,6 @@ class Cursor(object):
             self.execute(query, params)
             rowcount += self._rowcount
         self._rowcount = rowcount
-
-    def fetchone(self):
-        if not self.connection or not self.connection.is_connect():
-            raise InterfaceError("Lost connection", "08003")
-        if len(self._rows):
-            return self._rows.popleft()
-        return None
-
-    def fetchmany(self, size=1):
-        rs = []
-        for i in range(size):
-            r = self.fetchone()
-            if not r:
-                break
-            rs.append(r)
-        return rs
-
-    def fetchall(self):
-        r = list(self._rows)
-        self._rows.clear()
-        return r
-
-    def close(self):
-        self.connection = None
-
-    @property
-    def rowcount(self):
-        return self._rowcount
-
-    @property
-    def closed(self):
-        return self.connection is None or not self.connection.is_connect()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        r = self.fetchone()
-        if not r:
-            raise StopIteration()
-        return r
-
-    def next(self):
-        return self.__next__()
 
 
 class BaseConnection(object):
