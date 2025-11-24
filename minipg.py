@@ -538,6 +538,13 @@ class BaseConnection(object):
         else:
             return "'" + str(v) + "'"
 
+    def set_autocommit(self, autocommit):
+        self.autocommit = autocommit
+
+    def is_connect(self):
+        return bool(self._writer)
+
+
 class Connection(BaseConnection):
     def __init__(self, user, password, database, host, port, timeout, ssl_context):
         super().__init__(user, password, database, host, port, timeout, ssl_context)
@@ -878,9 +885,6 @@ class Connection(BaseConnection):
             self.set_timezone(self.tz_name)
 
 
-    def is_connect(self):
-        return bool(self._writer)
-
     def cursor(self, factory=Cursor):
         return factory(self)
 
@@ -905,9 +909,6 @@ class Connection(BaseConnection):
     @property
     def isolation_level(self):
         return self.get_parameter_status('TRANSACTION ISOLATION LEVEL')
-
-    def set_autocommit(self, autocommit):
-        self.autocommit = autocommit
 
     def _begin(self):
         self._send_message(b'Q', b"BEGIN\x00")
