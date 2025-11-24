@@ -835,31 +835,31 @@ class Connection(BaseConnection):
             raise err
 
     def _read(self, ln):
-        if not self.sock:
+        if not self._reader:
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
-            b = self.sock.recv(ln-len(r))
+            b = self._writer.recv(ln-len(r))
             if not b:
                 raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
     def _write(self, b):
-        if not self.sock:
+        if not self._writer:
             raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
-            n += self.sock.send(b[n:])
+            n += self._writer.send(b[n:])
 
     def _open(self):
-        self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        self._reader = self._writer = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                self.sock = self.ssl_context.wrap_socket(self.sock)
+                self._reader = self._writer = self.ssl_context.wrap_socket(self._writer)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
@@ -879,7 +879,7 @@ class Connection(BaseConnection):
 
 
     def is_connect(self):
-        return bool(self.sock)
+        return bool(self._writer)
 
     def cursor(self, factory=Cursor):
         return factory(self)
@@ -921,7 +921,7 @@ class Connection(BaseConnection):
     def commit(self):
         if DEBUG:
             DEBUG_OUTPUT('COMMIT')
-        if self.sock:
+        if self._writer:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
             self._begin()
@@ -933,7 +933,7 @@ class Connection(BaseConnection):
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
-        if self.sock:
+        if self._writer:
             self._rollback()
             self._begin()
 
@@ -944,11 +944,11 @@ class Connection(BaseConnection):
     def close(self):
         if DEBUG:
             DEBUG_OUTPUT('Connection::close()')
-        if self.sock:
+        if self._writer:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
-            self.sock.close()
-            self.sock = None
+            self._writer.close()
+            self._writer = None
 
     @classmethod
     def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
