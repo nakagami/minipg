@@ -276,6 +276,16 @@ class BaseCursor(object):
     def next(self):
         return self.__next__()
 
+    def nextset(self, procname, args=()):
+        raise NotSupportedError()
+
+    def setinputsizes(sizes):
+        pass
+
+    def setoutputsize(size, column=None):
+        pass
+
+
     def fetchone(self):
         if not self.connection or not self.connection.is_connect():
             raise InterfaceError("Lost connection", "08003")
@@ -315,15 +325,6 @@ class Cursor(BaseCursor):
 
     def __exit__(self, exc, value, traceback):
         self.close()
-
-    def nextset(self, procname, args=()):
-        raise NotSupportedError()
-
-    def setinputsizes(sizes):
-        pass
-
-    def setoutputsize(size, column=None):
-        pass
 
     def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
