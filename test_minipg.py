@@ -40,7 +40,7 @@ class TestMiniPG(unittest.TestCase):
 
     def setUp(self):
         try:
-            minipg.create_database(self.database, self.host, self.user, self.password)
+            minipg.Connection.create_database(self.database, self.host, self.user, self.password)
         except Exception:
             pass
         if not os.environ.get("GITHUB_ACTIONS"):
