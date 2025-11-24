@@ -955,12 +955,5 @@ class Connection(BaseConnection):
         return cls(host, user, password, database, port if port else 5432, timeout, ssl_context)
 
 
-    @classmethod
-    def create_database(cls, database, host, user, password='', port=None, ssl_context=None):
-        with cls.connect(host, user, password, None, port, None, ssl_context) as conn:
-            conn._rollback()
-            conn._send_message(b'Q', 'CREATE DATABASE {}'.format(database).encode('utf-8') + b'\x00')
-            conn.process_messages(None)
-
 def connect(host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
     return Connection.connect(user, password, database, host, port, timeout, ssl_context)

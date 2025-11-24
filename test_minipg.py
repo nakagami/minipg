@@ -39,10 +39,6 @@ class TestMiniPG(unittest.TestCase):
     database = 'test_minipg'
 
     def setUp(self):
-        try:
-            minipg.Connection.create_database(self.database, self.host, self.user, self.password)
-        except Exception:
-            pass
         if not os.environ.get("GITHUB_ACTIONS"):
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
