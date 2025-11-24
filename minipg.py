@@ -548,7 +548,6 @@ class BaseConnection(object):
 class Connection(BaseConnection):
     def __init__(self, user, password, database, host, port, timeout, ssl_context):
         super().__init__(user, password, database, host, port, timeout, ssl_context)
-        self._open()
 
     def __enter__(self):
         return self
@@ -953,7 +952,10 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
-        return cls(host, user, password, database, port if port else 5432, timeout, ssl_context)
+        conn = cls(host, user, password, database, port if port else 5432, timeout, ssl_context)
+        conn._open()
+
+        return conn
 
 
 def connect(host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
