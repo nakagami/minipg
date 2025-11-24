@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minipg"
+description = "Yet another PostgreSQL database driver"
+readme = { file = "README.rst", content-type = "text/x-rst" }
+license = { file = "LICENSE" }
+authors = [{ name = "Hajime Nakagami", email = "nakagami@gmail.com" }]
+keywords = ["PostgreSQL"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Database",
+]
+dynamic = ["version"]
+urls = { Homepage = "https://github.com/nakagami/minipg/" }
+
+[tool.setuptools]
+py-modules = ["minipg"]
+
+[tool.setuptools.dynamic]
+version = { attr = "minipg.__version__" }
