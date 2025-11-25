@@ -600,7 +600,7 @@ class BaseConnection(object):
         self.autocommit = autocommit
 
     def is_connect(self):
-        return bool(self._writer)
+        return bool(self.sock)
 
 
 class Connection(BaseConnection):
@@ -903,27 +903,27 @@ class Connection(BaseConnection):
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
-            b = self._writer.recv(ln-len(r))
+            b = self.sock.recv(ln-len(r))
             if not b:
                 raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
     def _write(self, b):
-        if not self._writer:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
-            n += self._writer.send(b[n:])
+            n += self.sock.send(b[n:])
 
     def _open(self):
-        self._reader = self._writer = socket.create_connection((self.host, self.port), self.timeout)
+        self._reader = self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                self._reader = self._writer = self.ssl_context.wrap_socket(self._writer)
+                self._reader = self.sock = self.ssl_context.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
@@ -979,7 +979,7 @@ class Connection(BaseConnection):
     def commit(self):
         if DEBUG:
             DEBUG_OUTPUT('COMMIT')
-        if self._writer:
+        if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
             self._begin()
@@ -991,7 +991,7 @@ class Connection(BaseConnection):
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
-        if self._writer:
+        if self.sock:
             self._rollback()
             self._begin()
 
@@ -1002,11 +1002,11 @@ class Connection(BaseConnection):
     def close(self):
         if DEBUG:
             DEBUG_OUTPUT('Connection::close()')
-        if self._writer:
+        if self.sock:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
-            self._writer.close()
-            self._writer = None
+            self.sock.close()
+            self.sock = None
 
     @classmethod
     def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
@@ -1316,27 +1316,27 @@ class AsyncConnection(BaseConnection):
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
-            b = self._writer.recv(ln-len(r))
+            b = self.sock.recv(ln-len(r))
             if not b:
                 raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
     def _write(self, b):
-        if not self._writer:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
-            n += self._writer.send(b[n:])
+            n += self.sock.send(b[n:])
 
     def _open(self):
-        self._reader = self._writer = socket.create_connection((self.host, self.port), self.timeout)
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                self._reader = self._writer = self.ssl_context.wrap_socket(self._writer)
+                self.sock = self.ssl_context.wrap_socket(self.socket)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
@@ -1392,7 +1392,7 @@ class AsyncConnection(BaseConnection):
     def commit(self):
         if DEBUG:
             DEBUG_OUTPUT('COMMIT')
-        if self._writer:
+        if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
             self._begin()
@@ -1404,7 +1404,7 @@ class AsyncConnection(BaseConnection):
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
-        if self._writer:
+        if self.sock:
             self._rollback()
             self._begin()
 
@@ -1415,11 +1415,11 @@ class AsyncConnection(BaseConnection):
     def close(self):
         if DEBUG:
             DEBUG_OUTPUT('Connection::close()')
-        if self._writer:
+        if self.sock:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
-            self._writer.close()
-            self._writer = None
+            self.sock.close()
+            self.sock = None
 
     @classmethod
     def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
