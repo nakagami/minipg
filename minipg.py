@@ -1025,30 +1025,30 @@ class AsyncConnection(BaseConnection):
             self.loop = asyncio.get_event_loop()
         super().__init__(*args, **kwargs)
 
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc, value, traceback):
-        self.close()
+    async def __aexit__(self, exc, value, traceback):
+        await self.close()
 
-    def _send_data(self, message, data):
+    async def _send_data(self, message, data):
         DEBUG_OUTPUT('<- {}:{}'.format(message, data))
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
+        await self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
 
-    def _send_message(self, message, data):
+    async def _send_message(self, message, data):
         DEBUG_OUTPUT('<- {}:{}'.format(message, data))
-        self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
+        await self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
     async def _process_messages(self, obj):
         errobj = None
         while True:
             try:
-                code = ord(self._read(1))
+                code = ord(await self._read(1))
             except OperationalError:
                 # something error occured
                 break
-            ln = _bytes_to_bint(self._read(4)) - 4
-            data = self._read(ln)
+            ln = _bytes_to_bint(await self._read(4)) - 4
+            data = await self._read(ln)
             if code == 90:
                 self._trans_status = data
                 DEBUG_OUTPUT("-> ReadyForQuery('Z'):{}".format(data))
@@ -1090,7 +1090,7 @@ class AsyncConnection(BaseConnection):
                     code = ord(self._read(1))
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
-                    data = self._read(ln)
+                    data = await self._read(ln)
                     _bytes_to_bint(data[:4]) == 11      # SCRAM first
 
                     # recv server first message
@@ -1136,7 +1136,7 @@ class AsyncConnection(BaseConnection):
                     ).decode('utf-8')
                     client_final_message = client_final_message_without_proof + ",p=" + proof
                     DEBUG_OUTPUT(f"client_final:{client_final_message}")
-                    self._send_data(
+                    await self._send_data(
                         b'p',
                         client_final_message.encode('utf-8')
                     )
@@ -1302,10 +1302,10 @@ class AsyncConnection(BaseConnection):
                     if not buf:
                         break
                     # send CopyData
-                    self._write(b'd' + _bint_to_bytes(len(buf) + 4))
-                    self._write(buf)
+                    await self._write(b'd' + _bint_to_bytes(len(buf) + 4))
+                    await self._write(buf)
                 # send CopyDone and Sync
-                self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
+                await self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
             else:
                 DEBUG_OUTPUT("-> Unknown({}):{}{}".format(code, ln, binascii.b2a_hex(data)))
                 pass
@@ -1338,9 +1338,9 @@ class AsyncConnection(BaseConnection):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
-            self._write(_bint_to_bytes(8))
-            self._write(_bint_to_bytes(80877103))    # SSL request
-            if self._read(1) == b'S':
+            await self._write(_bint_to_bytes(8))
+            await self._write(_bint_to_bytes(80877103))    # SSL request
+            if await self._read(1) == b'S':
                 self.sock = self.ssl_context.wrap_socket(self.socket)
             else:
                 raise InterfaceError("Server refuses SSL")
@@ -1351,85 +1351,85 @@ class AsyncConnection(BaseConnection):
             v += b'database\x00' + self.database.encode('ascii') + b'\x00'
         v += b'\x00'
 
-        self._write(_bint_to_bytes(len(v) + 4) + v)
-        self.process_messages(None)
+        await self._write(_bint_to_bytes(len(v) + 4) + v)
+        await self.process_messages(None)
 
-        self._begin()
+        await self._begin()
 
         if self.tz_name and self.tzinfo is None:
             self.set_timezone(self.tz_name)
 
 
-    def cursor(self, factory=Cursor):
+    def cursor(self, factory=AsyncCursor):
         return factory(self)
 
-    def execute(self, query, obj=None):
+    async def execute(self, query, obj=None):
         self.query = query
-        self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
+        await self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
         self.process_messages(obj)
         if self.autocommit:
-            self.commit()
+            await self.commit()
 
-    def get_parameter_status(self, s):
+    async def get_parameter_status(self, s):
         with self.cursor() as cur:
-            cur.execute('SHOW {}'.format(s))
-            return cur.fetchone()[0]
+            await cur.execute('SHOW {}'.format(s))
+            return await cur.fetchone()[0]
 
-    def set_timezone(self, timezone_name):
+    async def set_timezone(self, timezone_name):
         self.tz_name = timezone_name
         with self.cursor() as cur:
-            cur.execute("SET TIME ZONE %s",  [self.tz_name])
+            await cur.execute("SET TIME ZONE %s",  [self.tz_name])
             self.tzinfo = zoneinfo.ZoneInfo(self.tz_name)
 
     @property
-    def isolation_level(self):
-        return self.get_parameter_status('TRANSACTION ISOLATION LEVEL')
+    async def isolation_level(self):
+        return await self.get_parameter_status('TRANSACTION ISOLATION LEVEL')
 
-    def _begin(self):
-        self._send_message(b'Q', b"BEGIN\x00")
-        self._process_messages(None)
+    async def _begin(self):
+        await self._send_message(b'Q', b"BEGIN\x00")
+        await self._process_messages(None)
 
-    def begin(self):
+    async def begin(self):
         if DEBUG:
             DEBUG_OUTPUT('BEGIN')
-        self._begin()
+        await self._begin()
 
-    def commit(self):
+    async def commit(self):
         if DEBUG:
             DEBUG_OUTPUT('COMMIT')
         if self.sock:
-            self._send_message(b'Q', b"COMMIT\x00")
-            self.process_messages(None)
-            self._begin()
+            await self._send_message(b'Q', b"COMMIT\x00")
+            await self.process_messages(None)
+            await self._begin()
 
-    def _rollback(self):
-        self._send_message(b'Q', b"ROLLBACK\x00")
-        self._process_messages(None)
+    async def _rollback(self):
+        await self._send_message(b'Q', b"ROLLBACK\x00")
+        await self._process_messages(None)
 
-    def rollback(self):
+    async def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
         if self.sock:
-            self._rollback()
-            self._begin()
+            await self._rollback()
+            await self._begin()
 
-    def reopen(self):
-        self.close()
-        self._open()
+    async def reopen(self):
+        await self.close()
+        await self._open()
 
-    def close(self):
+    async def close(self):
         if DEBUG:
             DEBUG_OUTPUT('Connection::close()')
         if self.sock:
             # send Terminate
-            self._write(b'X\x00\x00\x00\x04')
+            await self._write(b'X\x00\x00\x00\x04')
             self.sock.close()
             self.sock = None
 
     @classmethod
-    def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
+    async def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
         conn = cls(host, user, password, database, port if port else 5432, timeout, ssl_context)
-        conn._open()
+        await conn._open()
 
         return conn
 
