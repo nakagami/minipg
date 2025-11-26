@@ -1017,8 +1017,13 @@ class Connection(BaseConnection):
 
 
 class AsyncConnection(BaseConnection):
-    def __init__(self, user, password, database, host, port, timeout, ssl_context):
-        super().__init__(user, password, database, host, port, timeout, ssl_context)
+    def __init__(self, *args, **kwargs):
+        if kwargs.get("loop"):
+            self.loop = kwargs.get("loop")
+            del kwargs["loop"]
+        else:
+            self.loop = asyncio.get_event_loop()
+        super().__init__(*args, **kwargs)
 
     def __enter__(self):
         return self
@@ -1034,7 +1039,7 @@ class AsyncConnection(BaseConnection):
         DEBUG_OUTPUT('<- {}:{}'.format(message, data))
         self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
 
-    def _process_messages(self, obj):
+    async def _process_messages(self, obj):
         errobj = None
         while True:
             try:
@@ -1306,30 +1311,30 @@ class AsyncConnection(BaseConnection):
                 pass
         return errobj
 
-    def process_messages(self, obj):
-        err = self._process_messages(obj)
+    async def process_messages(self, obj):
+        err = await self._process_messages(obj)
         if err:
             raise err
 
-    def _read(self, ln):
+    async def _read(self, ln):
         if not self._reader:
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
-            b = self.sock.recv(ln-len(r))
+            b = await self.loop.sock_recv(self.sock, ln-len(r))
             if not b:
                 raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
-    def _write(self, b):
+    async def _write(self, b):
         if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
-            n += self.sock.send(b[n:])
+            n += self.loop.sock_sendall(self.sock, b[n:])
 
-    def _open(self):
+    async def _open(self):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
