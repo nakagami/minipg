@@ -1327,7 +1327,7 @@ class AsyncConnection(BaseConnection):
             raise err
 
     async def _read(self, ln):
-        if not self._reader:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
@@ -1340,9 +1340,7 @@ class AsyncConnection(BaseConnection):
     async def _write(self, b):
         if not self.sock:
             raise InterfaceError("Lost connection", "08003")
-        n = 0
-        while (n < len(b)):
-            n += self.loop.sock_sendall(self.sock, b[n:])
+        await self.loop.sock_sendall(self.sock, b)
 
     async def _open(self):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
@@ -1351,7 +1349,7 @@ class AsyncConnection(BaseConnection):
             await self._write(_bint_to_bytes(8))
             await self._write(_bint_to_bytes(80877103))    # SSL request
             if await self._read(1) == b'S':
-                self.sock = self.ssl_context.wrap_socket(self.socket)
+                self.sock = self.ssl_context.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
