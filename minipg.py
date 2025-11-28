@@ -1072,13 +1072,13 @@ class AsyncConnection(BaseConnection):
                     salt = data[4:]
                     hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
                     hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
-                    self._send_data(b'p', b''.join([b'md5', hash2, b'\x00']))
+                    await self._send_data(b'p', b''.join([b'md5', hash2, b'\x00']))
 
                     # accept
-                    code = ord(self._read(1))
+                    code = ord(await self._read(1))
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
-                    data = self._read(ln)
+                    data = await self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 elif auth_method == 10:   # SASL
                     assert b'SCRAM-SHA-256\x00' in data
@@ -1090,14 +1090,14 @@ class AsyncConnection(BaseConnection):
 
                     # send client first message
                     client_first_message = 'n,,n=,r=' + client_nonce
-                    self._send_data(b'p', b''.join([
+                    await self._send_data(b'p', b''.join([
                         b'SCRAM-SHA-256\x00',
                         _bint_to_bytes(len(client_first_message)),
                         client_first_message.encode('utf-8')
                     ]))
                     DEBUG_OUTPUT(f"client_first:{client_first_message}")
 
-                    code = ord(self._read(1))
+                    code = ord(await self._read(1))
                     assert code == 82
                     ln = _bytes_to_bint(self._read(4)) - 4
                     data = await self._read(ln)
