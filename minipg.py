@@ -1345,14 +1345,6 @@ class AsyncConnection(BaseConnection):
     async def _open(self):
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
-        if self.ssl_context:
-            await self._write(_bint_to_bytes(8))
-            await self._write(_bint_to_bytes(80877103))    # SSL request
-            if await self._read(1) == b'S':
-                self.sock = self.ssl_context.wrap_socket(self.sock)
-            else:
-                raise InterfaceError("Server refuses SSL")
-        # protocol version 3.0
         v = b'\x00\x03\x00\x00'
         v += b'user\x00' + self.user.encode('ascii') + b'\x00'
         if self.database:
@@ -1435,8 +1427,8 @@ class AsyncConnection(BaseConnection):
             self.sock = None
 
     @classmethod
-    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None, ssl_context=None):
-        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout, ssl_context=ssl_context)
+    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None):
+        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout)
         await conn._open()
 
         return conn

@@ -21,8 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 ##############################################################################
-import os
-import ssl
 import asyncio
 import unittest
 import minipg
@@ -33,14 +31,6 @@ class AsyncTestCase(unittest.TestCase):
     password = 'password'
     database = 'test_minipg'
 
-    def setUp(self):
-        if not os.environ.get("GITHUB_ACTIONS"):
-            self.ssl_context = ssl.create_default_context()
-            self.ssl_context.check_hostname = False
-            self.ssl_context.verify_mode = ssl.CERT_NONE
-        else:
-            self.ssl_context = None
-
     def test_aio_connect(self):
         async def _test_select():
             conn = await minipg.AsyncConnection.connect(
@@ -48,7 +38,6 @@ class AsyncTestCase(unittest.TestCase):
                 user=self.user,
                 password=self.password,
                 database=self.database,
-                ssl_context=self.ssl_context,
             )
 
             cur = await conn.cursor()
@@ -68,7 +57,6 @@ class AsyncTestCase(unittest.TestCase):
                 user=self.user,
                 password=self.password,
                 database=self.database,
-                ssl_context=self.ssl_context,
             )
         
             cur = await conn.cursor()
