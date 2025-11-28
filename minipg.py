@@ -1437,8 +1437,8 @@ class AsyncConnection(BaseConnection):
             self.sock = None
 
     @classmethod
-    async def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
-        conn = cls(host, user, password, database, port if port else 5432, timeout, ssl_context)
+    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None, ssl_context=None):
+        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout, ssl_context=ssl_context)
         await conn._open()
 
         return conn
