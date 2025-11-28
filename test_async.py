@@ -1,43 +1,59 @@
+##############################################################################
+# The MIT License (MIT)
+#
+# Copyright (c) 2025 Hajime Nakagami
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+##############################################################################
+import os
+import ssl
 import asyncio
 import unittest
+import minipg
 
-class AsyncTestCase(unittest.TestBase):
+class AsyncTestCase(unittest.TestCase):
     host = 'localhost'
     user = 'postgres'
     password = 'password'
     database = 'test_minipg'
 
     def setUp(self):
-        self.database = tempfile.mktemp()
-        conn = firebirdsql.create_database(
-            auth_plugin_name=self.auth_plugin_name,
-            wire_crypt=self.wire_crypt,
-            host=self.host,
-            port=self.port,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            page_size=self.page_size)
-        conn.close()
-
-    def tearDown(self):
-        pass
+        if not os.environ.get("GITHUB_ACTIONS"):
+            self.ssl_context = ssl.create_default_context()
+            self.ssl_context.check_hostname = False
+            self.ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            self.ssl_context = None
 
     def test_aio_connect(self):
         async def _test_select():
-            conn = await firebirdsql.aio.connect(
-                auth_plugin_name=self.auth_plugin_name,
-                wire_crypt=self.wire_crypt,
+            conn = await minipg.AsyncConnection.connect(
                 host=self.host,
-                port=self.port,
-                database=self.database,
                 user=self.user,
                 password=self.password,
-                page_size=self.page_size,
+                database=self.database,
+                ssl_context=self.ssl_context,
             )
-            cur = conn.cursor()
 
-            await cur.execute("SELECT 42 FROM rdb$database")
+            cur = await conn.cursor()
+
+            await cur.execute("SELECT 42")
             self.assertEqual(cur.rowcount, 1)
             result = await cur.fetchall()
             self.assertEqual(result, [(42,)])
@@ -47,19 +63,16 @@ class AsyncTestCase(unittest.TestBase):
         loop = asyncio.new_event_loop()
 
         async def _test_select():
-            conn = await firebirdsql.aio.connect(
-                auth_plugin_name=self.auth_plugin_name,
-                wire_crypt=self.wire_crypt,
+            conn = await minipg.AsyncConnection.connect(
                 host=self.host,
-                port=self.port,
-                database=self.database,
                 user=self.user,
                 password=self.password,
-                page_size=self.page_size,
-                loop=loop,
+                database=self.database,
+                ssl_context=self.ssl_context,
             )
-            cur = conn.cursor()
-            await cur.execute("SELECT 42 FROM rdb$database")
+        
+            cur = await conn.cursor()
+            await cur.execute("SELECT 42")
             result = await cur.fetchall()
             self.assertEqual(result, [(42, ), ])
             await cur.close()
@@ -69,20 +82,15 @@ class AsyncTestCase(unittest.TestBase):
 
     def test_create_pool(self):
         async def _test_select(loop):
-            pool = await firebirdsql.aio.create_pool(
-                auth_plugin_name=self.auth_plugin_name,
-                wire_crypt=self.wire_crypt,
+            pool = await minipg.create_pool(
                 host=self.host,
-                port=self.port,
-                database=self.database,
                 user=self.user,
                 password=self.password,
-                page_size=self.page_size,
-                loop=loop,
+                database=self.database,
             )
             async with pool.acquire() as conn:
                 async with conn.cursor() as cur:
-                    await cur.execute("SELECT 42 FROM rdb$database")
+                    await cur.execute("SELECT 42")
                     self.assertEqual(
                         cur.description,
                         [('CONSTANT', 496, 11, 4, 11, 0, False)],
@@ -95,35 +103,6 @@ class AsyncTestCase(unittest.TestBase):
         loop = asyncio.new_event_loop()
         loop.run_until_complete(_test_select(loop))
         loop.close()
-
-    def test_insert_returning(self):
-        async def _test_insert_returning(loop):
-            pool = await firebirdsql.aio.create_pool(
-                auth_plugin_name=self.auth_plugin_name,
-                wire_crypt=self.wire_crypt,
-                host=self.host,
-                port=self.port,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                page_size=self.page_size,
-                loop=loop,
-            )
-            async with pool.acquire() as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute("CREATE TABLE foo (a INTEGER)")
-                    await conn.commit()
-                    await cur.execute("INSERT INTO foo (a) VALUES(?) returning a", [1])
-                    res = await cur.fetchall()
-                    self.assertEqual(res, [(1,)])
-                    await conn.commit()
-            pool.close()
-            await pool.wait_closed()
-
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(_test_insert_returning(loop))
-        loop.close()
-
 
 if __name__ == "__main__":
     unittest.main()
