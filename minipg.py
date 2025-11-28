@@ -45,7 +45,7 @@ import warnings
 from collections.abc import Coroutine
 
 
-DEBUG = False
+DEBUG = True
 
 VERSION = (0, 9, 1)
 __version__ = '%s.%s.%s' % VERSION
@@ -1026,13 +1026,12 @@ class Connection(BaseConnection):
 
 
 class AsyncConnection(BaseConnection):
-    def __init__(self, *args, **kwargs):
-        if kwargs.get("loop"):
-            self.loop = kwargs.get("loop")
-            del kwargs["loop"]
+    def __init__(self, user, password, database, host, port, timeout, ssl_context, loop=None):
+        super().__init__(user, password, database, host, port, timeout, ssl_context)
+        if loop:
+            self.loop = loop
         else:
             self.loop = asyncio.get_event_loop()
-        super().__init__(*args, **kwargs)
 
     async def __aenter__(self):
         return self
@@ -1344,6 +1343,8 @@ class AsyncConnection(BaseConnection):
             n += self.loop.sock_sendall(self.sock, b[n:])
 
     async def _open(self):
+        print("host", self.host)
+        print("port", self.port)
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
