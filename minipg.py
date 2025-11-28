@@ -375,13 +375,13 @@ class Cursor(BaseCursor):
 
 
 class AsyncCursor(BaseCursor):
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc, value, traceback):
+    async def __aexit__(self, exc, value, traceback):
         self.close()
 
-    def execute(self, query, args=None):
+    async def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
             raise InterfaceError("Lost connection", "08003")
         self.description = []
@@ -400,9 +400,9 @@ class AsyncCursor(BaseCursor):
                 escaped_args = self.connection.escape_parameter(args)
             query = query % escaped_args
         self.query = query
-        self.connection.execute(self.query, self)
+        await self.connection.execute(self.query, self)
 
-    def callproc(self, proc_name, args=None):
+    async def callproc(self, proc_name, args=None):
         escaped_args = []
         if args is not None:
             if isinstance(args, (tuple, list)):
@@ -416,14 +416,23 @@ class AsyncCursor(BaseCursor):
             else:
                 escaped_args = self.connection.escape_parameter(args)
         self.query = 'select * from ' + proc_name + '(' + ','.join(escaped_args) + ')'
-        self.connection.execute(self.query, self)
+        await self.connection.execute(self.query, self)
 
-    def executemany(self, query, seq_of_params):
+    async def executemany(self, query, seq_of_params):
         rowcount = 0
         for params in seq_of_params:
-            self.execute(query, params)
+            await self.execute(query, params)
             rowcount += self._rowcount
         self._rowcount = rowcount
+
+    async def fetchone():
+        return super().fetchone()
+
+    async def fetchmany():
+        return super().fetchmany()
+
+    async def fetchall():
+        return super().fetchall()
 
 
 class BaseConnection(object):
