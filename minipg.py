@@ -451,6 +451,7 @@ class BaseConnection(object):
         self.encoders = {}
         self.tz_name = None
         self.tzinfo = None
+        self.sock = None
 
     def _decode_column(self, data, oid):
         def _trim_timezone_offset(data):
@@ -908,7 +909,7 @@ class Connection(BaseConnection):
             raise err
 
     def _read(self, ln):
-        if not self._reader:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
@@ -926,7 +927,7 @@ class Connection(BaseConnection):
             n += self.sock.send(b[n:])
 
     def _open(self):
-        self._reader = self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
             self._write(_bint_to_bytes(8))
