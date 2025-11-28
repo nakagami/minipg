@@ -45,7 +45,7 @@ import warnings
 from collections.abc import Coroutine
 
 
-DEBUG = True
+DEBUG = False
 
 VERSION = (0, 9, 1)
 __version__ = '%s.%s.%s' % VERSION
@@ -436,7 +436,7 @@ class AsyncCursor(BaseCursor):
 
 
 class BaseConnection(object):
-    def __init__(self, user, password, database, host, port, timeout, ssl_context):
+    def __init__(self, user=None, password=None, database=None, host=None, port=None, timeout=None, ssl_context=None):
         self.user = user
         self.password = password
         self.database = database
@@ -1026,12 +1026,13 @@ class Connection(BaseConnection):
 
 
 class AsyncConnection(BaseConnection):
-    def __init__(self, user, password, database, host, port, timeout, ssl_context, loop=None):
-        super().__init__(user, password, database, host, port, timeout, ssl_context)
-        if loop:
-            self.loop = loop
+    def __init__(self, *args, **kwargs):
+        if kwargs.get("loop"):
+            self.loop = kwargs.get("loop")
+            del kwargs["loop"]
         else:
             self.loop = asyncio.get_event_loop()
+        super().__init__(*args, **kwargs)
 
     async def __aenter__(self):
         return self
@@ -1343,8 +1344,6 @@ class AsyncConnection(BaseConnection):
             n += self.loop.sock_sendall(self.sock, b[n:])
 
     async def _open(self):
-        print("host", self.host)
-        print("port", self.port)
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
@@ -1692,7 +1691,6 @@ class Pool(asyncio.AbstractServer):
                 await self._fill_free_pool(True)
                 if self._free:
                     conn = self._free.popleft()
-#                    assert conn.is_disconnect(), conn
                     assert conn not in self._used, (conn, self._used)
                     self._used.add(conn)
                     return conn
@@ -1719,7 +1717,6 @@ class Pool(asyncio.AbstractServer):
             self._acquiring += 1
             try:
                 conn = AsyncConnection(loop=self._loop, **self._conn_kwargs)
-                await conn._initialize()
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
@@ -1757,7 +1754,7 @@ class Pool(asyncio.AbstractServer):
             return fut
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
-        if conn.is_disconnect():
+        if not conn.is_connect():
             in_trans = conn.get_transaction_status()
             if in_trans:
                 conn.close()
