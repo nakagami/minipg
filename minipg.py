@@ -40,6 +40,9 @@ import hmac
 import enum
 import zoneinfo
 import json
+import asyncio
+import warnings
+from collections.abc import Coroutine
 
 
 DEBUG = False
@@ -276,6 +279,16 @@ class BaseCursor(object):
     def next(self):
         return self.__next__()
 
+    def nextset(self, procname, args=()):
+        raise NotSupportedError()
+
+    def setinputsizes(sizes):
+        pass
+
+    def setoutputsize(size, column=None):
+        pass
+
+
     def fetchone(self):
         if not self.connection or not self.connection.is_connect():
             raise InterfaceError("Lost connection", "08003")
@@ -315,15 +328,6 @@ class Cursor(BaseCursor):
 
     def __exit__(self, exc, value, traceback):
         self.close()
-
-    def nextset(self, procname, args=()):
-        raise NotSupportedError()
-
-    def setinputsizes(sizes):
-        pass
-
-    def setoutputsize(size, column=None):
-        pass
 
     def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
@@ -370,8 +374,69 @@ class Cursor(BaseCursor):
         self._rowcount = rowcount
 
 
+class AsyncCursor(BaseCursor):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc, value, traceback):
+        self.close()
+
+    async def execute(self, query, args=None):
+        if not self.connection or not self.connection.is_connect():
+            raise InterfaceError("Lost connection", "08003")
+        self.description = []
+        self._rows.clear()
+        self.args = args
+        if args is not None:
+            if isinstance(args, (tuple, list)):
+                escaped_args = tuple(
+                    [self.connection.escape_parameter(arg) for arg in args]
+                )
+            elif isinstance(args, dict):
+                escaped_args = {
+                    k: self.connection.escape_parameter(v) for (k, v) in args.items()
+                }
+            else:
+                escaped_args = self.connection.escape_parameter(args)
+            query = query % escaped_args
+        self.query = query
+        await self.connection.execute(self.query, self)
+
+    async def callproc(self, proc_name, args=None):
+        escaped_args = []
+        if args is not None:
+            if isinstance(args, (tuple, list)):
+                escaped_args = tuple(
+                    [self.connection.escape_parameter(arg) for arg in args]
+                )
+            elif isinstance(args, dict):
+                escaped_args = {
+                    k: self.connection.escape_parameter(v) for (k, v) in args.items()
+                }
+            else:
+                escaped_args = self.connection.escape_parameter(args)
+        self.query = 'select * from ' + proc_name + '(' + ','.join(escaped_args) + ')'
+        await self.connection.execute(self.query, self)
+
+    async def executemany(self, query, seq_of_params):
+        rowcount = 0
+        for params in seq_of_params:
+            await self.execute(query, params)
+            rowcount += self._rowcount
+        self._rowcount = rowcount
+
+    async def fetchone(self):
+        return super().fetchone()
+
+    async def fetchmany(self):
+        return super().fetchmany()
+
+    async def fetchall(self):
+        return super().fetchall()
+
+
 class BaseConnection(object):
-    def __init__(self, user, password, database, host, port, timeout, ssl_context):
+    def __init__(self, user=None, password=None, database=None, host=None, port=None, timeout=None, ssl_context=None):
         self.user = user
         self.password = password
         self.database = database
@@ -386,6 +451,7 @@ class BaseConnection(object):
         self.encoders = {}
         self.tz_name = None
         self.tzinfo = None
+        self.sock = None
 
     def _decode_column(self, data, oid):
         def _trim_timezone_offset(data):
@@ -544,7 +610,7 @@ class BaseConnection(object):
         self.autocommit = autocommit
 
     def is_connect(self):
-        return bool(self._writer)
+        return bool(self.sock)
 
 
 class Connection(BaseConnection):
@@ -843,31 +909,31 @@ class Connection(BaseConnection):
             raise err
 
     def _read(self, ln):
-        if not self._reader:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         r = b''
         while len(r) < ln:
-            b = self._writer.recv(ln-len(r))
+            b = self.sock.recv(ln-len(r))
             if not b:
                 raise InterfaceError("Can't recv packets", "08003")
             r += b
         return r
 
     def _write(self, b):
-        if not self._writer:
+        if not self.sock:
             raise InterfaceError("Lost connection", "08003")
         n = 0
         while (n < len(b)):
-            n += self._writer.send(b[n:])
+            n += self.sock.send(b[n:])
 
     def _open(self):
-        self._reader = self._writer = socket.create_connection((self.host, self.port), self.timeout)
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
         DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
         if self.ssl_context:
             self._write(_bint_to_bytes(8))
             self._write(_bint_to_bytes(80877103))    # SSL request
             if self._read(1) == b'S':
-                self._reader = self._writer = self.ssl_context.wrap_socket(self._writer)
+                self._reader = self.sock = self.ssl_context.wrap_socket(self.sock)
             else:
                 raise InterfaceError("Server refuses SSL")
         # protocol version 3.0
@@ -881,10 +947,6 @@ class Connection(BaseConnection):
         self.process_messages(None)
 
         self._begin()
-
-        if self.tz_name and self.tzinfo is None:
-            self.set_timezone(self.tz_name)
-
 
     def cursor(self, factory=Cursor):
         return factory(self)
@@ -900,12 +962,6 @@ class Connection(BaseConnection):
         with self.cursor() as cur:
             cur.execute('SHOW {}'.format(s))
             return cur.fetchone()[0]
-
-    def set_timezone(self, timezone_name):
-        self.tz_name = timezone_name
-        with self.cursor() as cur:
-            cur.execute("SET TIME ZONE %s",  [self.tz_name])
-            self.tzinfo = zoneinfo.ZoneInfo(self.tz_name)
 
     @property
     def isolation_level(self):
@@ -923,7 +979,7 @@ class Connection(BaseConnection):
     def commit(self):
         if DEBUG:
             DEBUG_OUTPUT('COMMIT')
-        if self._writer:
+        if self.sock:
             self._send_message(b'Q', b"COMMIT\x00")
             self.process_messages(None)
             self._begin()
@@ -935,7 +991,7 @@ class Connection(BaseConnection):
     def rollback(self):
         if DEBUG:
             DEBUG_OUTPUT('ROLLBACK')
-        if self._writer:
+        if self.sock:
             self._rollback()
             self._begin()
 
@@ -946,11 +1002,11 @@ class Connection(BaseConnection):
     def close(self):
         if DEBUG:
             DEBUG_OUTPUT('Connection::close()')
-        if self._writer:
+        if self.sock:
             # send Terminate
             self._write(b'X\x00\x00\x00\x04')
-            self._writer.close()
-            self._writer = None
+            self.sock.close()
+            self.sock = None
 
     @classmethod
     def connect(cls, host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
@@ -960,5 +1016,775 @@ class Connection(BaseConnection):
         return conn
 
 
+class AsyncConnection(BaseConnection):
+    def __init__(self, *args, **kwargs):
+        if kwargs.get("loop"):
+            self.loop = kwargs.get("loop")
+            del kwargs["loop"]
+        else:
+            self.loop = asyncio.get_event_loop()
+        super().__init__(*args, **kwargs)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc, value, traceback):
+        await self.close()
+
+    async def _send_data(self, message, data):
+        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
+        await self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data]))
+
+    async def _send_message(self, message, data):
+        DEBUG_OUTPUT('<- {}:{}'.format(message, data))
+        await self._write(b''.join([message, _bint_to_bytes(len(data) + 4), data, b'H\x00\x00\x00\x04']))
+
+    async def _process_messages(self, obj):
+        errobj = None
+        while True:
+            try:
+                code = ord(await self._read(1))
+            except OperationalError:
+                # something error occured
+                break
+            ln = _bytes_to_bint(await self._read(4)) - 4
+            data = await self._read(ln)
+            if code == 90:
+                self._trans_status = data
+                DEBUG_OUTPUT("-> ReadyForQuery('Z'):{}".format(data))
+                break
+            elif code == 82:
+                auth_method = _bytes_to_bint(data[:4])
+                DEBUG_OUTPUT("-> Authentication('R'):{}".format(auth_method))
+                if auth_method == 0:      # trust
+                    pass
+                elif auth_method == 5:    # md5
+                    salt = data[4:]
+                    hash1 = hashlib.md5(self.password.encode('ascii') + self.user.encode("ascii")).hexdigest().encode("ascii")
+                    hash2 = hashlib.md5(hash1+salt).hexdigest().encode("ascii")
+                    await self._send_data(b'p', b''.join([b'md5', hash2, b'\x00']))
+
+                    # accept
+                    code = ord(await self._read(1))
+                    assert code == 82
+                    ln = _bytes_to_bint(self._read(4)) - 4
+                    data = await self._read(ln)
+                    assert _bytes_to_bint(data[:4]) == 0
+                elif auth_method == 10:   # SASL
+                    assert b'SCRAM-SHA-256\x00' in data
+                    printable = string.ascii_letters + string.digits + '+/'
+                    client_nonce = ''.join(
+                        printable[random.randrange(0, len(printable))]
+                        for i in range(24)
+                    )
+
+                    # send client first message
+                    client_first_message = 'n,,n=,r=' + client_nonce
+                    await self._send_data(b'p', b''.join([
+                        b'SCRAM-SHA-256\x00',
+                        _bint_to_bytes(len(client_first_message)),
+                        client_first_message.encode('utf-8')
+                    ]))
+                    DEBUG_OUTPUT(f"client_first:{client_first_message}")
+
+                    code = ord(await self._read(1))
+                    assert code == 82
+                    ln = _bytes_to_bint(await self._read(4)) - 4
+                    data = await self._read(ln)
+                    _bytes_to_bint(data[:4]) == 11      # SCRAM first
+
+                    # recv server first message
+                    server = {
+                        kv[0]: kv[2:]
+                        for kv in data[4:].decode('utf-8').split(',')
+                    }
+                    # r: server nonce
+                    # s: servre salt
+                    # i: iteration count
+                    assert server['r'][:len(client_nonce)] == client_nonce
+                    DEBUG_OUTPUT(f"servre_first:{server}")
+
+                    # send client final message
+                    salted_pass = hashlib.pbkdf2_hmac(
+                        'sha256',
+                        self.password.encode('utf-8'),
+                        base64.standard_b64decode(server['s']),
+                        int(server['i']),
+                    )
+
+                    client_key = hmac.HMAC(
+                        salted_pass, b"Client Key", hashlib.sha256
+                    ).digest()
+
+                    client_first_message_bare = "n=,r=" + client_nonce
+                    server_first_message = "r=%s,s=%s,i=%s" % (server['r'], server['s'], server['i'])
+                    client_final_message_without_proof = "c=biws,r=" + server['r']
+                    auth_msg = ','.join([
+                        client_first_message_bare,
+                        server_first_message,
+                        client_final_message_without_proof
+                    ])
+
+                    client_sig = hmac.HMAC(
+                        hashlib.sha256(client_key).digest(),
+                        auth_msg.encode('utf-8'),
+                        hashlib.sha256
+                    ).digest()
+
+                    proof = base64.standard_b64encode(
+                        b"".join([bytes([x ^ y]) for x, y in zip(client_key, client_sig)])
+                    ).decode('utf-8')
+                    client_final_message = client_final_message_without_proof + ",p=" + proof
+                    DEBUG_OUTPUT(f"client_final:{client_final_message}")
+                    await self._send_data(
+                        b'p',
+                        client_final_message.encode('utf-8')
+                    )
+
+                    code = ord(await self._read(1))
+                    assert code == 82
+                    ln = _bytes_to_bint(await self._read(4)) - 4
+                    data = await self._read(ln)
+                    _bytes_to_bint(data[:4]) == 12      # SCRAM final
+
+                    # accept
+                    code = ord(await self._read(1))
+                    assert code == 82
+                    ln = _bytes_to_bint(await self._read(4)) - 4
+                    data = await self._read(ln)
+                    assert _bytes_to_bint(data[:4]) == 0
+                else:
+                    errobj = InterfaceError("Authentication method %d not supported." % (auth_method,))
+            elif code == 83:
+                k, v, _ = data.split(b'\x00')
+                DEBUG_OUTPUT("-> ParameterStatus('S'):{}:{}".format(k, v))
+                if k == b'server_encoding':
+                    self.encoding = v.decode('ascii')
+                elif k == b'server_version':
+                    version = v.decode('ascii').split('(')[0].split('.')
+                    self.server_version = int(version[0]) * 10000
+                    if len(version) > 0:
+                        try:
+                            self.server_version += int(version[1]) * 100
+                        except Exception:
+                            pass
+                    if len(version) > 1:
+                        try:
+                            self.server_version += int(version[2])
+                        except Exception:
+                            pass
+                elif k == b'TimeZone':
+                    self.tz_name = v.decode('ascii')
+                    self.tzinfo = None
+            elif code == 75:
+                DEBUG_OUTPUT("-> BackendKeyData('K')")
+                pass
+            elif code == 67:
+                if not obj:
+                    DEBUG_OUTPUT("-> CommandComplete('C')")
+                    continue
+                command = data[:-1].decode('ascii')
+                DEBUG_OUTPUT("-> CommandComplete('C'):{}".format(command))
+                if command == 'SHOW':
+                    obj._rowcount = 1
+                else:
+                    for k in ('SELECT', 'UPDATE', 'DELETE', 'INSERT'):
+                        if command[:len(k)] == k:
+                            obj._rowcount = int(command.split(' ')[-1])
+                            break
+            elif code == 84:
+                if not obj:
+                    continue
+                count = _bytes_to_bint(data[0:2])
+                obj.description = [None] * count
+                n = 2
+                idx = 0
+                for i in range(count):
+                    name = data[n:n+data[n:].find(b'\x00')]
+                    n += len(name) + 1
+                    try:
+                        name = name.decode(self.encoding)
+                    except UnicodeDecodeError:
+                        pass
+                    type_code = _bytes_to_bint(data[n+6:n+10])
+                    if type_code == PG_TYPE_VARCHAR:
+                        size = _bytes_to_bint(data[n+12:n+16]) - 4
+                        precision = -1
+                        scale = -1
+                    elif type_code == PG_TYPE_NUMERIC:
+                        size = _bytes_to_bint(data[n+10:n+12])
+                        precision = _bytes_to_bint(data[n+12:n+14])
+                        scale = precision - _bytes_to_bint(data[n+14:n+16])
+                    else:
+                        size = _bytes_to_bint(data[n+10:n+12])
+                        precision = -1
+                        scale = -1
+#                        table_oid = _bytes_to_bint(data[n:n+4])
+#                        table_pos = _bytes_to_bint(data[n+4:n+6])
+#                        size = _bytes_to_bint(data[n+10:n+12])
+#                        modifier = _bytes_to_bint(data[n+12:n+16])
+#                        format = _bytes_to_bint(data[n+16:n+18]),
+                    field = Description(name, type_code, None, size, precision, scale, None)
+                    n += 18
+                    obj.description[idx] = field
+                    idx += 1
+                DEBUG_OUTPUT("-> RowDescription('T'):{}".format(obj.description))
+            elif code == 68:
+                if not obj:
+                    DEBUG_OUTPUT("-> DataRow('D')")
+                    continue
+                n = 2
+                row = []
+                while n < len(data):
+                    if data[n:n+4] == b'\xff\xff\xff\xff':
+                        row.append(None)
+                        n += 4
+                    else:
+                        ln = _bytes_to_bint(data[n:n+4])
+                        n += 4
+                        row.append(data[n:n+ln])
+                        n += ln
+                for i in range(len(row)):
+                    row[i] = self._decode_column(row[i], obj.description[i][1])
+                obj._rows.append(tuple(row))
+                DEBUG_OUTPUT("-> DataRow('D'):{}".format(tuple(row)))
+            elif code == 78:
+                DEBUG_OUTPUT("-> NoticeResponse('N')")
+                pass
+            elif code == 69 and not errobj:
+                err = data.split(b'\x00')
+                # http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
+                errcode = err[2][1:].decode('utf-8')
+                message = "{}:{}".format(self.query, err[3][1:].decode(self.encoding))
+                DEBUG_OUTPUT("-> ErrorResponse('E'):{}:{}".format(errcode, message))
+
+                if errcode[:2] == '0A':
+                    errobj = NotSupportedError(message, errcode)
+                elif errcode[:2] in ('20', '21'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:2] in ('22', ):
+                    errobj = DataError(message, errcode)
+                elif errcode[:2] == '23':
+                    errobj = IntegrityError(message, errcode)
+                elif errcode[:2] in ('24', '25'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] in ('26', '27', '28'):
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:2] in ('2B', '2D', '2F'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] == '34':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:2] in ('38', '39', '3B'):
+                    errobj = InternalError(message, errcode)
+                elif errcode[:2] in ('3D', '3F'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:2] in ('40', '42', '44'):
+                    errobj = ProgrammingError(message, errcode)
+                elif errcode[:1] == '5':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:1] in 'F':
+                    errobj = InternalError(message, errcode)
+                elif errcode[:1] in 'H':
+                    errobj = OperationalError(message, errcode)
+                elif errcode[:1] in ('P', 'X'):
+                    errobj = InternalError(message, errcode)
+                else:
+                    errobj = DatabaseError(message, errcode)
+            elif code == 72:    # CopyOutputResponse('H')
+                pass
+            elif code == 100:   # CopyData('d')
+                obj.write(data)
+            elif code == 99:    # CopyDataDone('c')
+                pass
+            elif code == 71:    # CopyInResponse('G')
+                while True:
+                    buf = obj.read(8192)
+                    if not buf:
+                        break
+                    # send CopyData
+                    await self._write(b'd' + _bint_to_bytes(len(buf) + 4))
+                    await self._write(buf)
+                # send CopyDone and Sync
+                await self._write(b'c\x00\x00\x00\x04S\x00\x00\x00\x04')
+            else:
+                DEBUG_OUTPUT("-> Unknown({}):{}{}".format(code, ln, binascii.b2a_hex(data)))
+                pass
+        return errobj
+
+    async def process_messages(self, obj):
+        err = await self._process_messages(obj)
+        if err:
+            raise err
+
+    async def _read(self, ln):
+        if not self.sock:
+            raise InterfaceError("Lost connection", "08003")
+        r = b''
+        while len(r) < ln:
+            b = await self.loop.sock_recv(self.sock, ln-len(r))
+            if not b:
+                raise InterfaceError("Can't recv packets", "08003")
+            r += b
+        return r
+
+    async def _write(self, b):
+        if not self.sock:
+            raise InterfaceError("Lost connection", "08003")
+        await self.loop.sock_sendall(self.sock, b)
+
+    async def _open(self):
+        self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        DEBUG_OUTPUT("Connection._open() socket %s:%d" % (self.host, self.port))
+        v = b'\x00\x03\x00\x00'
+        v += b'user\x00' + self.user.encode('ascii') + b'\x00'
+        if self.database:
+            v += b'database\x00' + self.database.encode('ascii') + b'\x00'
+        v += b'\x00'
+
+        await self._write(_bint_to_bytes(len(v) + 4) + v)
+        await self.process_messages(None)
+
+        await self._begin()
+
+        if self.tz_name and self.tzinfo is None:
+            await self.set_timezone(self.tz_name)
+
+
+    async def cursor(self, factory=AsyncCursor):
+        return factory(self)
+
+    async def execute(self, query, obj=None):
+        self.query = query
+        await self._send_message(b'Q', query.encode(self.encoding) + b'\x00')
+        await self.process_messages(obj)
+        if self.autocommit:
+            await self.commit()
+
+    async def get_parameter_status(self, s):
+        with self.cursor() as cur:
+            await cur.execute('SHOW {}'.format(s))
+            return await cur.fetchone()[0]
+
+    async def set_timezone(self, timezone_name):
+        self.tz_name = timezone_name
+        with await self.cursor() as cur:
+            await cur.execute("SET TIME ZONE %s",  [self.tz_name])
+            self.tzinfo = zoneinfo.ZoneInfo(self.tz_name)
+
+    @property
+    async def isolation_level(self):
+        return await self.get_parameter_status('TRANSACTION ISOLATION LEVEL')
+
+    async def _begin(self):
+        await self._send_message(b'Q', b"BEGIN\x00")
+        await self._process_messages(None)
+
+    async def begin(self):
+        if DEBUG:
+            DEBUG_OUTPUT('BEGIN')
+        await self._begin()
+
+    async def commit(self):
+        if DEBUG:
+            DEBUG_OUTPUT('COMMIT')
+        if self.sock:
+            await self._send_message(b'Q', b"COMMIT\x00")
+            await self.process_messages(None)
+            await self._begin()
+
+    async def _rollback(self):
+        await self._send_message(b'Q', b"ROLLBACK\x00")
+        await self._process_messages(None)
+
+    async def rollback(self):
+        if DEBUG:
+            DEBUG_OUTPUT('ROLLBACK')
+        if self.sock:
+            await self._rollback()
+            await self._begin()
+
+    async def reopen(self):
+        await self.close()
+        await self._open()
+
+    async def close(self):
+        if DEBUG:
+            DEBUG_OUTPUT('AsyncConnection::close()')
+        if self.sock:
+            # send Terminate
+            await self._write(b'X\x00\x00\x00\x04')
+            self.sock.close()
+            self.sock = None
+
+    @classmethod
+    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None):
+        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout)
+        await conn._open()
+
+        return conn
+
+
+# based on aiomysql
+# https://github.com/aio-libs/aiomysql/
+
+class _ContextManager(Coroutine):
+
+    __slots__ = ('_coro', '_obj')
+
+    def __init__(self, coro):
+        self._coro = coro
+        self._obj = None
+
+    def send(self, value):
+        return self._coro.send(value)
+
+    def throw(self, typ, val=None, tb=None):
+        if val is None:
+            return self._coro.throw(typ)
+        elif tb is None:
+            return self._coro.throw(typ, val)
+        else:
+            return self._coro.throw(typ, val, tb)
+
+    def close(self):
+        return self._coro.close()
+
+    @property
+    def gi_frame(self):
+        return self._coro.gi_frame
+
+    @property
+    def gi_running(self):
+        return self._coro.gi_running
+
+    @property
+    def gi_code(self):
+        return self._coro.gi_code
+
+    def __next__(self):
+        return self.send(None)
+
+    def __iter__(self):
+        return self._coro.__await__()
+
+    def __await__(self):
+        return self._coro.__await__()
+
+    async def __aenter__(self):
+        self._obj = await self._coro
+        return self._obj
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._obj.close()
+        self._obj = None
+
+
+class _PoolContextManager(_ContextManager):
+    async def __aexit__(self, exc_type, exc, tb):
+        self._obj.close()
+        await self._obj.wait_closed()
+        self._obj = None
+
+
+class _PoolAcquireContextManager(_ContextManager):
+
+    __slots__ = ('_coro', '_conn', '_pool')
+
+    def __init__(self, coro, pool):
+        self._coro = coro
+        self._conn = None
+        self._pool = pool
+
+    async def __aenter__(self):
+        self._conn = await self._coro
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc, tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+
+class _PoolConnectionContextManager:
+    """Context manager.
+
+    This enables the following idiom for acquiring and releasing a
+    connection around a block:
+
+        with (yield from pool) as conn:
+            cur = yield from conn.cursor()
+
+    while failing loudly when accidentally using:
+
+        with pool:
+            <block>
+    """
+
+    __slots__ = ('_pool', '_conn')
+
+    def __init__(self, pool, conn):
+        self._pool = pool
+        self._conn = conn
+
+    def __enter__(self):
+        assert self._conn
+        return self._conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+    async def __aenter__(self):
+        assert not self._conn
+        self._conn = await self._pool.acquire()
+        return self._conn
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        try:
+            await self._pool.release(self._conn)
+        finally:
+            self._pool = None
+            self._conn = None
+
+
+async def _create_pool(minsize=1, maxsize=10, pool_recycle=-1,
+                       loop=None, **kwargs):
+    if loop is None:
+        loop = asyncio.get_event_loop()
+
+    pool = Pool(minsize=minsize, maxsize=maxsize,
+                pool_recycle=pool_recycle, loop=loop, **kwargs)
+    if minsize > 0:
+        async with pool._cond:
+            await pool._fill_free_pool(False)
+    return pool
+
+
+class Pool(asyncio.AbstractServer):
+    """Connection pool"""
+
+    def __init__(self, minsize, maxsize, pool_recycle, loop, **kwargs):
+        if minsize < 0:
+            raise ValueError("minsize should be zero or greater")
+        if maxsize < minsize and maxsize != 0:
+            raise ValueError("maxsize should be not less than minsize")
+        self._minsize = minsize
+        self._loop = loop
+        self._conn_kwargs = kwargs
+        self._acquiring = 0
+        self._free = collections.deque(maxlen=maxsize or None)
+        self._cond = asyncio.Condition()
+        self._used = set()
+        self._terminated = set()
+        self._closing = False
+        self._closed = False
+        self._recycle = pool_recycle
+
+    @property
+    def minsize(self):
+        return self._minsize
+
+    @property
+    def maxsize(self):
+        return self._free.maxlen
+
+    @property
+    def size(self):
+        return self.freesize + len(self._used) + self._acquiring
+
+    @property
+    def freesize(self):
+        return len(self._free)
+
+    async def clear(self):
+        """Close all free connections in pool."""
+        async with self._cond:
+            while self._free:
+                conn = self._free.popleft()
+                await conn.ensure_closed()
+            self._cond.notify()
+
+    @property
+    def closed(self):
+        """
+        The readonly property that returns ``True`` if connections is closed.
+        """
+        return self._closed
+
+    def close(self):
+        """Close pool.
+
+        Mark all pool connections to be closed on getting back to pool.
+        Closed pool doesn't allow to acquire new connections.
+        """
+        if self._closed:
+            return
+        self._closing = True
+
+    def terminate(self):
+        """Terminate pool.
+
+        Close pool with instantly closing all acquired connections also.
+        """
+
+        self.close()
+
+        for conn in list(self._used):
+            conn.close()
+            self._terminated.add(conn)
+
+        self._used.clear()
+
+    async def wait_closed(self):
+        """Wait for closing all pool's connections."""
+
+        if self._closed:
+            return
+        if not self._closing:
+            raise RuntimeError(".wait_closed() should be called "
+                               "after .close()")
+
+        while self._free:
+            conn = self._free.popleft()
+            conn.close()
+
+        async with self._cond:
+            while self.size > self.freesize:
+                await self._cond.wait()
+
+        self._closed = True
+
+    def acquire(self):
+        """Acquire free connection from the pool."""
+        coro = self._acquire()
+        return _PoolAcquireContextManager(coro, self)
+
+    async def _acquire(self):
+        if self._closing:
+            raise RuntimeError("Cannot acquire connection after closing pool")
+        async with self._cond:
+            while True:
+                await self._fill_free_pool(True)
+                if self._free:
+                    conn = self._free.popleft()
+                    assert conn not in self._used, (conn, self._used)
+                    self._used.add(conn)
+                    return conn
+                else:
+                    await self._cond.wait()
+
+    async def _fill_free_pool(self, override_min):
+        # iterate over free connections and remove timed out ones
+        free_size = len(self._free)
+        n = 0
+        while n < free_size:
+            conn = self._free[-1]
+            if (
+                self._recycle > -1 and
+                self._loop.time() - conn.last_usage > self._recycle
+            ):
+                self._free.pop()
+                conn.close()
+            else:
+                self._free.rotate()
+            n += 1
+
+        while self.size < self.minsize:
+            self._acquiring += 1
+            try:
+                conn = AsyncConnection(loop=self._loop, **self._conn_kwargs)
+                # raise exception if pool is closing
+                self._free.append(conn)
+                self._cond.notify()
+            finally:
+                self._acquiring -= 1
+        if self._free:
+            return
+
+        if override_min and (not self.maxsize or self.size < self.maxsize):
+            self._acquiring += 1
+            try:
+                conn = AsyncConnection(loop=self._loop, **self._conn_kwargs)
+                await conn._initialize()
+                # raise exception if pool is closing
+                self._free.append(conn)
+                self._cond.notify()
+            finally:
+                self._acquiring -= 1
+
+    async def _wakeup(self):
+        async with self._cond:
+            self._cond.notify()
+
+    def release(self, conn):
+        """Release free connection back to the connection pool.
+
+        This is **NOT** a coroutine.
+        """
+        fut = self._loop.create_future()
+        fut.set_result(None)
+
+        if conn in self._terminated:
+            assert conn.closed, conn
+            self._terminated.remove(conn)
+            return fut
+        assert conn in self._used, (conn, self._used)
+        self._used.remove(conn)
+        if conn.is_connect():
+            conn.close()
+        return fut
+
+    def __enter__(self):
+        raise RuntimeError(
+            '"yield from" should be used as context manager expression')
+
+    def __exit__(self, *args):
+        # This must exist because __enter__ exists, even though that
+        # always raises; that's how the with-statement works.
+        pass  # pragma: nocover
+
+    def __iter__(self):
+        # This is not a coroutine.  It is meant to enable the idiom:
+        #
+        #     with (yield from pool) as conn:
+        #         <block>
+        #
+        # as an alternative to:
+        #
+        #     conn = yield from pool.acquire()
+        #     try:
+        #         <block>
+        #     finally:
+        #         conn.release()
+        conn = yield from self.acquire()
+        return _PoolConnectionContextManager(self, conn)
+
+    def __await__(self):
+        msg = "with await pool as conn deprecated, use" \
+              "async with pool.acquire() as conn instead"
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
+        conn = yield from self.acquire()
+        return _PoolConnectionContextManager(self, conn)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        await self.wait_closed()
+
+
 def connect(host, user, password='', database=None, port=None, timeout=None, ssl_context=None):
     return Connection.connect(user, password, database, host, port, timeout, ssl_context)
+
+
+def create_pool(minsize=1, maxsize=10, pool_recycle=-1,
+                loop=None, **kwargs):
+    coro = _create_pool(minsize=minsize, maxsize=maxsize,
+                        pool_recycle=pool_recycle, loop=loop, **kwargs)
+    return _PoolContextManager(coro)
