@@ -47,7 +47,7 @@ from collections.abc import Coroutine
 
 DEBUG = False
 
-VERSION = (0, 9, 1)
+VERSION = (0, 10, 0)
 __version__ = '%s.%s.%s' % VERSION
 apilevel = '2.0'
 threadsafety = 1
