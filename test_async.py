@@ -40,13 +40,31 @@ class AsyncTestCase(unittest.TestCase):
                 database=self.database,
             )
 
-            cur = await conn.cursor()
+            cur = conn.cursor()
 
             await cur.execute("SELECT 42")
             self.assertEqual(cur.rowcount, 1)
             result = await cur.fetchall()
             self.assertEqual(result, [(42,)])
         asyncio.run(_test_select())
+
+    def test_aio_with_cursor(self):
+        loop = asyncio.new_event_loop()
+
+        async def _test_select():
+            conn = await minipg.AsyncConnection.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database,
+            )
+            async with conn.cursor(cursor=minipg.AsyncCursor) as cur:
+                await cur.execute("SELECT 42 a")
+                result = await cur.fetchall()
+                self.assertEqual(result, [(42,)])
+            await conn.close()
+        loop.run_until_complete(_test_select())
+        loop.close()
 
     def test_aio_connect_with_loop(self):
         loop = asyncio.new_event_loop()
@@ -59,16 +77,15 @@ class AsyncTestCase(unittest.TestCase):
                 database=self.database,
             )
         
-            cur = await conn.cursor()
+            cur = conn.cursor()
             await cur.execute("SELECT 42")
             result = await cur.fetchall()
             self.assertEqual(result, [(42, ), ])
-            cur.close()
+            await cur.close()
             await conn.close()
         loop.run_until_complete(_test_select())
         loop.close()
 
-    @unittest.skip("create_pool() still not work")
     def test_create_pool(self):
         async def _test_select(loop):
             pool = await minipg.create_pool(
@@ -78,11 +95,11 @@ class AsyncTestCase(unittest.TestCase):
                 database=self.database,
             )
             async with pool.acquire() as conn:
-                with await conn.cursor() as cur:
-                    await cur.execute("SELECT 42")
+                async with conn.cursor() as cur:
+                    await cur.execute("SELECT 42 as a")
                     self.assertEqual(
                         cur.description,
-                        [('CONSTANT', 496, 11, 4, 11, 0, False)],
+                        [('a', 23, None, 4, -1, -1, None)],
                     )
                     (r,) = await cur.fetchone()
                     self.assertEqual(r, 42)

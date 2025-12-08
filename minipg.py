@@ -38,7 +38,6 @@ import hashlib
 import base64
 import hmac
 import enum
-import zoneinfo
 import json
 import asyncio
 import warnings
@@ -375,11 +374,21 @@ class Cursor(BaseCursor):
 
 
 class AsyncCursor(BaseCursor):
-    def __enter__(self):
+    async def __aenter__(self):
         return self
 
-    def __exit__(self, exc, value, traceback):
-        self.close()
+    async def __anext__(self):
+        ret = await self.fetchone()
+        if ret is not None:
+            return ret
+        else:
+            raise StopAsyncIteration  # noqa
+
+    async def __aexit__(self, exc, value, traceback):
+        await self.close()
+
+    async def close(self):
+        return
 
     async def execute(self, query, args=None):
         if not self.connection or not self.connection.is_connect():
@@ -948,8 +957,10 @@ class Connection(BaseConnection):
 
         self._begin()
 
-    def cursor(self, factory=Cursor):
-        return factory(self)
+    def cursor(self, cursor=None):
+        if cursor is None:
+            cursor = Cursor
+        return cursor(self)
 
     def execute(self, query, obj=None):
         self.query = query
@@ -1020,10 +1031,11 @@ class AsyncConnection(BaseConnection):
     def __init__(self, *args, **kwargs):
         if kwargs.get("loop"):
             self.loop = kwargs.get("loop")
-            del kwargs["loop"]
         else:
             self.loop = asyncio.get_event_loop()
+        del kwargs["loop"]
         super().__init__(*args, **kwargs)
+        self.last_usage = self.loop.time()
 
     async def __aenter__(self):
         return self
@@ -1346,12 +1358,11 @@ class AsyncConnection(BaseConnection):
 
         await self._begin()
 
-        if self.tz_name and self.tzinfo is None:
-            await self.set_timezone(self.tz_name)
-
-
-    async def cursor(self, factory=AsyncCursor):
-        return factory(self)
+    def cursor(self, cursor=None):
+        self.last_usage = self.loop.time()
+        if cursor is None:
+            cursor = AsyncCursor
+        return cursor(self)
 
     async def execute(self, query, obj=None):
         self.query = query
@@ -1364,12 +1375,6 @@ class AsyncConnection(BaseConnection):
         with self.cursor() as cur:
             await cur.execute('SHOW {}'.format(s))
             return await cur.fetchone()[0]
-
-    async def set_timezone(self, timezone_name):
-        self.tz_name = timezone_name
-        with await self.cursor() as cur:
-            await cur.execute("SET TIME ZONE %s",  [self.tz_name])
-            self.tzinfo = zoneinfo.ZoneInfo(self.tz_name)
 
     @property
     async def isolation_level(self):
@@ -1417,8 +1422,8 @@ class AsyncConnection(BaseConnection):
             self.sock = None
 
     @classmethod
-    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None):
-        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout)
+    async def connect(cls, host=None, user=None, password='', database=None, port=None, timeout=None, loop=None):
+        conn = cls(host=host, user=user, password=password, database=database, port = port if port else 5432, timeout=timeout, loop=loop)
         await conn._open()
 
         return conn
@@ -1697,7 +1702,7 @@ class Pool(asyncio.AbstractServer):
         while self.size < self.minsize:
             self._acquiring += 1
             try:
-                conn = AsyncConnection(loop=self._loop, **self._conn_kwargs)
+                conn = await AsyncConnection.connect(**(self._conn_kwargs | {"loop": self._loop}))
                 # raise exception if pool is closing
                 self._free.append(conn)
                 self._cond.notify()
@@ -1709,7 +1714,7 @@ class Pool(asyncio.AbstractServer):
         if override_min and (not self.maxsize or self.size < self.maxsize):
             self._acquiring += 1
             try:
-                conn = AsyncConnection(loop=self._loop, **self._conn_kwargs)
+                conn = await AsyncConnection.connect(**(self._conn_kwargs | {"loop": self._loop}))
                 await conn._initialize()
                 # raise exception if pool is closing
                 self._free.append(conn)
@@ -1735,8 +1740,16 @@ class Pool(asyncio.AbstractServer):
             return fut
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
-        if conn.is_connect():
-            conn.close()
+        if not conn.is_connect():
+            in_trans = conn.get_transaction_status()
+            if in_trans:
+                conn.close()
+                return fut
+            if self._closing:
+                conn.close()
+            else:
+                self._free.append(conn)
+            fut = self._loop.create_task(self._wakeup())
         return fut
 
     def __enter__(self):
