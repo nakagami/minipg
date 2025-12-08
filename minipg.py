@@ -1029,6 +1029,8 @@ class Connection(BaseConnection):
 
 class AsyncConnection(BaseConnection):
     def __init__(self, *args, **kwargs):
+        if kwargs.get("ssl_context"):
+            raise NotImplementedError("AsyncConnection is not support ssl_context parameter")
         if kwargs.get("loop"):
             self.loop = kwargs.get("loop")
         else:
