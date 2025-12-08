@@ -61,6 +61,13 @@ Below is an example of an ssl connection without certificate validation.
                        database='database_name',
                        ssl_context=ssl_context)
 
+Asyncio example
+++++++++++++++++++
+
+Please refer to the test code.
+
+https://github.com/nakagami/minipg/blob/master/test_async.py
+
 
 Restrictions and Unsupported Features
 --------------------------------------
