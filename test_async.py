@@ -46,6 +46,7 @@ class AsyncTestCase(unittest.TestCase):
             self.assertEqual(cur.rowcount, 1)
             result = await cur.fetchall()
             self.assertEqual(result, [(42,)])
+            await conn.close()
         asyncio.run(_test_select())
 
     def test_aio_with_cursor(self):

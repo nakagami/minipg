@@ -1658,7 +1658,7 @@ class Pool(asyncio.AbstractServer):
 
         while self._free:
             conn = self._free.popleft()
-            conn.close()
+            await conn.close()
 
         async with self._cond:
             while self.size > self.freesize:
@@ -1742,13 +1742,10 @@ class Pool(asyncio.AbstractServer):
             return fut
         assert conn in self._used, (conn, self._used)
         self._used.remove(conn)
-        if not conn.is_connect():
-            in_trans = conn.get_transaction_status()
-            if in_trans:
-                conn.close()
-                return fut
+        if conn.is_connect():
             if self._closing:
-                conn.close()
+                conn.sock.close()
+                conn.sock = None
             else:
                 self._free.append(conn)
             fut = self._loop.create_task(self._wakeup())
