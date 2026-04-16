@@ -25,6 +25,7 @@
 
 import sys
 import socket
+import ssl
 import string
 import decimal
 import datetime
@@ -116,6 +117,56 @@ class NotSupportedError(DatabaseError):
 def DEBUG_OUTPUT(s):
     if DEBUG:
         print(s, end=' \n', file=sys.stderr)
+
+
+def _parse_cert_sig_hash(cert_der):
+    """Extract the hash algorithm name for tls-server-end-point channel binding.
+
+    Per RFC 5929 section 4: if the certificate signature uses MD2 or MD5,
+    fall back to SHA-256; otherwise use the certificate's own hash algorithm.
+    """
+    # Signature algorithm OID -> hash name mapping
+    oid_hash_map = {
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x02]): 'sha256',  # md2WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x04]): 'sha256',  # md5WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x05]): 'sha1',    # sha1WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0b]): 'sha256',  # sha256WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0c]): 'sha384',  # sha384WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x0d]): 'sha512',  # sha512WithRSAEncryption
+        bytes([0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02]): 'sha256',         # ecdsa-with-SHA256
+        bytes([0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x03]): 'sha384',         # ecdsa-with-SHA384
+        bytes([0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x04]): 'sha512',         # ecdsa-with-SHA512
+    }
+
+    def read_tlv(data, offset):
+        tag = data[offset]
+        offset += 1
+        length = data[offset]
+        offset += 1
+        if length & 0x80:
+            n = length & 0x7f
+            length = int.from_bytes(data[offset:offset + n], 'big')
+            offset += n
+        return tag, data[offset:offset + length], offset + length
+
+    # Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm, signature }
+    _, cert_seq, _ = read_tlv(cert_der, 0)
+    _, _, next_off = read_tlv(cert_seq, 0)          # skip tbsCertificate
+    _, sig_alg, _ = read_tlv(cert_seq, next_off)    # read signatureAlgorithm
+    _, oid_bytes, _ = read_tlv(sig_alg, 0)          # read OID
+    return oid_hash_map.get(oid_bytes, 'sha256')
+
+
+def _get_cbind_data(sock):
+    """Return tls-server-end-point channel binding data (RFC 5929) for an ssl.SSLSocket.
+
+    Returns None if the peer certificate is unavailable.
+    """
+    cert_der = sock.getpeercert(binary_form=True)
+    if not cert_der:
+        return None
+    hash_name = _parse_cert_sig_hash(cert_der)
+    return hashlib.new(hash_name, cert_der).digest()
 
 
 # -----------------------------------------------------------------------------
@@ -672,7 +723,23 @@ class Connection(BaseConnection):
                     data = self._read(ln)
                     assert _bytes_to_bint(data[:4]) == 0
                 elif auth_method == 10:   # SASL
-                    assert b'SCRAM-SHA-256\x00' in data
+                    use_plus = (
+                        b'SCRAM-SHA-256-PLUS\x00' in data
+                        and isinstance(self.sock, ssl.SSLSocket)
+                    )
+                    if use_plus:
+                        cbind_data = _get_cbind_data(self.sock)
+                        use_plus = cbind_data is not None
+                    if use_plus:
+                        mechanism = b'SCRAM-SHA-256-PLUS'
+                        gs2_header = 'p=tls-server-end-point,,'
+                        cbind_input = gs2_header.encode('utf-8') + cbind_data
+                    else:
+                        assert b'SCRAM-SHA-256\x00' in data
+                        mechanism = b'SCRAM-SHA-256'
+                        gs2_header = 'n,,'
+                        cbind_input = gs2_header.encode('utf-8')
+
                     printable = string.ascii_letters + string.digits + '+/'
                     client_nonce = ''.join(
                         printable[random.randrange(0, len(printable))]
@@ -680,9 +747,10 @@ class Connection(BaseConnection):
                     )
 
                     # send client first message
-                    client_first_message = 'n,,n=,r=' + client_nonce
+                    client_first_message_bare = "n=,r=" + client_nonce
+                    client_first_message = gs2_header + client_first_message_bare
                     self._send_data(b'p', b''.join([
-                        b'SCRAM-SHA-256\x00',
+                        mechanism + b'\x00',
                         _bint_to_bytes(len(client_first_message)),
                         client_first_message.encode('utf-8')
                     ]))
@@ -717,9 +785,9 @@ class Connection(BaseConnection):
                         salted_pass, b"Client Key", hashlib.sha256
                     ).digest()
 
-                    client_first_message_bare = "n=,r=" + client_nonce
                     server_first_message = "r=%s,s=%s,i=%s" % (server['r'], server['s'], server['i'])
-                    client_final_message_without_proof = "c=biws,r=" + server['r']
+                    channel_binding = base64.standard_b64encode(cbind_input).decode('utf-8')
+                    client_final_message_without_proof = "c=" + channel_binding + ",r=" + server['r']
                     auth_msg = ','.join([
                         client_first_message_bare,
                         server_first_message,
@@ -1092,8 +1160,10 @@ class AsyncConnection(BaseConnection):
                         for i in range(24)
                     )
 
-                    # send client first message
-                    client_first_message = 'n,,n=,r=' + client_nonce
+                    # send client first message (no channel binding for async)
+                    client_first_message_bare = "n=,r=" + client_nonce
+                    client_first_message = 'n,,' + client_first_message_bare
+                    cbind_input = b'n,,'
                     await self._send_data(b'p', b''.join([
                         b'SCRAM-SHA-256\x00',
                         _bint_to_bytes(len(client_first_message)),
@@ -1130,9 +1200,9 @@ class AsyncConnection(BaseConnection):
                         salted_pass, b"Client Key", hashlib.sha256
                     ).digest()
 
-                    client_first_message_bare = "n=,r=" + client_nonce
                     server_first_message = "r=%s,s=%s,i=%s" % (server['r'], server['s'], server['i'])
-                    client_final_message_without_proof = "c=biws,r=" + server['r']
+                    channel_binding = base64.standard_b64encode(cbind_input).decode('utf-8')
+                    client_final_message_without_proof = "c=" + channel_binding + ",r=" + server['r']
                     auth_msg = ','.join([
                         client_first_message_bare,
                         server_first_message,
